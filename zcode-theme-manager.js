@@ -219,7 +219,7 @@
   }
   function refreshSettingsLabel() {
     const label = document.getElementById('zpt-settings-current');
-    if (label) label.textContent = themeSummary();
+    if (label && label.textContent !== themeSummary()) label.textContent = themeSummary();
   }
   function mountSettingsEntry() {
     // ZCode keeps its settings page in a React subtree. The stable
