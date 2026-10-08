@@ -1,8 +1,10 @@
-# ⚡ ZCode Model Puller · Linux / Ubuntu 增强版
+# ✨ ZCode Enhancer · Linux / Ubuntu 增强工具
 
 [![CI](https://github.com/lbg2002/zcode-model-puller/actions/workflows/ci.yml/badge.svg)](https://github.com/lbg2002/zcode-model-puller/actions/workflows/ci.yml) ![MIT](https://img.shields.io/badge/License-MIT-blue) ![Linux](https://img.shields.io/badge/Linux-Ubuntu%20.deb-informational)
 
-> 为 [ZCode](https://zcode.z.ai) 的自定义 OpenAI 兼容供应商添加「⚡ 自动拉取模型」功能：从 API 同步可用模型 ID、比较已有模型，并可选择写入配置。此仓库是 [HHQ-666/zcode-model-puller](https://github.com/HHQ-666/zcode-model-puller) 的第三方 Fork，新增 Linux 安装、版本化备份及 **可选的 systemd 自动维护**；不是 ZCode 官方项目。
+> **ZCode Enhancer** 是面向 ZCode 的第三方增强工具集，目前提供自定义主题与模型供应商管理功能。它为 [ZCode](https://zcode.z.ai) 的自定义 OpenAI 兼容供应商添加「⚡ 自动拉取模型」功能：从 API 同步可用模型 ID、比较已有模型，并可选择写入配置。此仓库是 [HHQ-666/zcode-model-puller](https://github.com/HHQ-666/zcode-model-puller) 的第三方 Fork，新增 Linux 安装、版本化备份及 **可选的 systemd 自动维护**；不是 ZCode 官方项目。
+
+**项目展示名：** ZCode Enhancer（原项目 ZCode Model Puller）。为保留 Fork 关系、已有安装路径和 systemd 服务兼容性，当前 GitHub 仓库 URL 仍为 `lbg2002/zcode-model-puller`，旧脚本与服务名也保持不变。
 
 **中文文档：** [Linux 完整指南](LINUX.md) · [变更记录](CHANGELOG.md) · [安全说明](SECURITY.md) · [参与贡献](CONTRIBUTING.md)
 
@@ -21,7 +23,7 @@
 
 ## 🎨 Linux 自定义主题管理器（实验性）
 
-新增独立的**主题管理**入口，与原来的「⚡ 自动拉取模型」按钮共存。打开 ZCode 后在**右下角**点击「主题」即可切换六套内置配色（Tokyo Night、Catppuccin Mocha、GitHub Dimmed、Nord、Solarized Light、Paper），精细调整背景、侧栏、面板、卡片、文字、强调色和边框；修改实时预览，点击**应用主题**保存。按 Escape/取消可撤回试色，「恢复官方默认」仅清理本插件的外观覆盖。
+主题管理已经整合进 ZCode 的 **设置 → 外观（Appearance） → 自定义主题 → 管理主题**，不再占用右下角悬浮位置；与原来的「⚡ 自动拉取模型」按钮共存。进入后即可切换六套内置配色（Tokyo Night、Catppuccin Mocha、GitHub Dimmed、Nord、Solarized Light、Paper），精细调整背景、侧栏、面板、卡片、文字、强调色和边框；修改实时预览，点击**应用主题**保存。按 Escape/取消可撤回试色，「恢复官方默认」仅清理本插件的外观覆盖。
 
 **已安装 Model Puller 与自动守护的 Linux 用户**：
 
@@ -37,7 +39,7 @@ bash install-linux.sh status
 
 完整的升级、恢复、兼容性限制及问题处理请阅读 [THEME.md](THEME.md)。自动维护器会比较 ASAR 中的主题脚本与本地已安装的脚本，仅在确有变化时尝试受校验的升级；ZCode 仍在运行时会推迟资源替换。**不会**自动从 GitHub 更新自身代码。
 
-> 主题管理器目前已经通过代码静态检查与单元测试，但尚未经其他用户的 ZCode Linux 客户端实际图形界面验证。它是非官方 CSS 变量覆盖，部分 ZCode 控件可能不会完全跟随自定义颜色；浅色预设建议先切换 ZCode 官方浅色模式。
+> 主题管理器已经获得 Ubuntu 用户的实际安装运行确认；本次设置页入口改造尚需在你的真实 ZCode 上检查。它是非官方 CSS 变量覆盖，部分 ZCode 控件可能不会完全跟随自定义颜色；浅色预设建议先切换 ZCode 官方浅色模式。
 
 ## 界面预览
 
