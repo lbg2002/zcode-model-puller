@@ -12,7 +12,7 @@ auto = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(auto)
 
 
-def fake_asar(path, patched=False):
+def fake_asar(path, patched=False, themed=False):
     tree = {'files': {'out': {'files': {
         'main': {'files': {'index.js': {'size': 10}}},
         'preload': {'files': {'index.cjs': {'size': 10}}},
@@ -20,6 +20,8 @@ def fake_asar(path, patched=False):
     }}}}
     if patched:
         tree['files']['out']['files']['renderer']['files']['zcode-model-puller.js'] = {'size': 8}
+    if themed:
+        tree['files']['out']['files']['renderer']['files']['zcode-theme-manager.js'] = {'size': 8}
     payload = json.dumps(tree).encode()
     path.write_bytes(b'\0'*8 + len(payload).to_bytes(4,'little') + b'\0'*4 + payload + b'X'*1024)
 
@@ -42,12 +44,31 @@ class WatcherTests(unittest.TestCase):
         self.assertFalse(auto.asar_ready(self.source))
 
     def test_skip_currently_injected(self):
-        fake_asar(self.source, True)
+        fake_asar(self.source, True, themed=True)
         with patch.object(auto, 'STATE_ROOT', self.root / 'state'), \
              patch.object(auto, 'snapshot_stable', return_value=True), \
+             patch('linux_installer.theme_up_to_date', return_value=True), \
              patch.object(auto, 'backup_pristine') as backup:
             auto.run_once({'zcode_path': str(self.root)})
             backup.assert_not_called()
+
+    def test_upgrade_existing_model_puller_without_theme(self):
+        fake_asar(self.source, patched=True, themed=False)
+        with patch.object(auto, 'STATE_ROOT', self.root / 'state'), \
+             patch.object(auto, 'snapshot_stable', return_value=True), \
+             patch.object(auto.shutil, 'which', return_value='/usr/bin/node'), \
+             patch.object(auto, '_run_build_and_publish') as build:
+            auto.run_once({'zcode_path': str(self.root)})
+            build.assert_called_once()
+
+    def test_running_app_defers_upgrade(self):
+        fake_asar(self.source, patched=True, themed=False)
+        with patch.object(auto, 'STATE_ROOT', self.root / 'state'), \
+             patch.object(auto, 'snapshot_stable', return_value=True), \
+             patch.object(auto, 'zcode_process_running', return_value=True), \
+             patch.object(auto, '_run_build_and_publish') as build:
+            auto.run_once({'zcode_path': str(self.root)})
+            build.assert_not_called()
 
     def test_content_addressed_backup(self):
         with patch.object(auto, 'STATE_ROOT', self.root / 'state'), patch.object(auto.os, 'chown'):
@@ -61,16 +82,19 @@ class WatcherTests(unittest.TestCase):
         stage = self.root / 'stage/ZCode/resources'
         stage.mkdir(parents=True)
         patched = stage / 'app.asar'
-        fake_asar(patched, True)
+        fake_asar(patched, True, themed=True)
         (stage / 'app.asar.unpacked').mkdir()
         (stage / 'app.asar.unpacked/native.node').write_text('patched')
         official = auto.digest(self.source)
         with patch.object(auto, 'STATE_ROOT', self.root / 'state'), patch.object(auto.os, 'chown'):
             (self.root / 'state').mkdir()
-            with self.assertRaisesRegex(RuntimeError, 'changed during build'):
-                auto.publish_built(self.root / 'resources', stage.parent.parent, 'wrongsha')
+            with patch('linux_installer.theme_up_to_date', return_value=True):
+                with self.assertRaisesRegex(RuntimeError, 'changed during build'):
+                    auto.publish_built(self.root / 'resources', stage.parent.parent, 'wrongsha')
             self.assertEqual((self.root / 'resources/app.asar.unpacked/native.node').read_text(), 'original')
-            auto.publish_built(self.root / 'resources', stage.parent.parent, official)
+            auto.backup_pristine(self.root / 'resources', official)
+            with patch('linux_installer.theme_up_to_date', return_value=True):
+                auto.publish_built(self.root / 'resources', stage.parent.parent, official)
             self.assertTrue(auto.asar_ready(self.source))
             self.assertEqual((self.root / 'resources/app.asar.unpacked/native.node').read_text(), 'patched')
             self.assertEqual(json.loads((self.root / 'state/active.json').read_text())['original_sha256'], official)
