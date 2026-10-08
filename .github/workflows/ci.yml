@@ -29,7 +29,7 @@ jobs:
       - name: Theme manager behavior tests
         run: node --test tests/test_theme_manager.cjs
       - name: Python syntax
-        run: python -m py_compile linux_installer.py auto_maintain.py auto_builder.py
+        run: python -m py_compile inject_tool.py linux_installer.py auto_maintain.py auto_builder.py
       - name: Bash syntax
         run: bash -n install-linux.sh install-auto-linux.sh install.sh uninstall.sh
       - name: Unit tests
