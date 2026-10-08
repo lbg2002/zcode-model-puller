@@ -1,3 +1,5 @@
+> **🐧 Ubuntu/Linux (.deb) 一键安装**：已适配 `/opt/ZCode/resources/app.asar`。先退出 ZCode，然后在仓库根目录执行 `bash install-linux.sh`；ZCode 通过 apt 更新后重复执行相同命令即可。支持 `bash install-linux.sh status` 查看状态、`bash install-linux.sh restore` 恢复由 Linux 安装器修改的版本。请勿用 `sudo bash install-linux.sh`；脚本只在最终安装经过校验的文件时请求 sudo。详见 [Linux 安装指南](LINUX.md)。
+
 # ⚡️ ZCode Model Puller (ZCode 自定义模型自动拉取与同步工具)
 
 <p align="center">
