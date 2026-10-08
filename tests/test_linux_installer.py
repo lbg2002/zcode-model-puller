@@ -88,6 +88,35 @@ class LinuxInstallerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "out/preload/index.cjs"):
             mod.ensure_expected_layout(p)
 
+    def test_node18_and_modern_node_pick_compatible_asar(self):
+        self.assertEqual(mod.asar_package_for_node('v18.19.1'), '@electron/asar@3.4.1')
+        self.assertEqual(mod.asar_package_for_node('v20.19.0'), '@electron/asar@3.4.1')
+        self.assertEqual(mod.asar_package_for_node('v22.11.0'), '@electron/asar@3.4.1')
+        self.assertEqual(mod.asar_package_for_node('v22.12.0'), '@electron/asar@4.3.1')
+        self.assertEqual(mod.asar_package_for_node('v24.15.0'), '@electron/asar@4.3.1')
+        with self.assertRaisesRegex(RuntimeError, '>=18'):
+            mod.asar_package_for_node('v16.20.0')
+        with self.assertRaisesRegex(ValueError, 'Cannot parse'):
+            mod.asar_package_for_node('unknown')
+
+    def test_node_probe_uses_actual_runtime(self):
+        from types import SimpleNamespace
+        with patch.object(mod.subprocess, 'run', return_value=SimpleNamespace(stdout='v18.19.1\\n')) as run:
+            self.assertEqual(mod.active_asar_package({'PATH':'/usr/bin:/bin'}), ('@electron/asar@3.4.1', 'v18.19.1'))
+            self.assertEqual(run.call_args.args[0], ['node', '--version'])
+            self.assertEqual(run.call_args.kwargs['env']['PATH'], '/usr/bin:/bin')
+
+    def test_staged_injector_uses_pinned_asar_package(self):
+        sample = ( 'import os\\n'
+                   'ZCODE_APP = Path("/Applications/ZCode.app")\\n'
+                   'RESOURCES_DIR = ZCODE_APP / "Contents" / "Resources"\\n'
+                   'run(["npx", "--yes", "@electron/asar", "extract", archive, directory])\\n'
+                   'run(["npx", "--yes", "@electron/asar", "pack", directory, archive])\\n')
+        patched = mod.patch_injector(sample)
+        self.assertIn('ZCODE_PULLER_ASAR_PACKAGE', patched)
+        self.assertEqual(patched.count('os.environ.get("ZCODE_PULLER_ASAR_PACKAGE", "@electron/asar")'), 2)
+        self.assertEqual(mod.patch_injector(patched), patched)
+
     def test_patch_injector_original(self):
         sample = 'import os\nZCODE_APP = Path("/Applications/ZCode.app")\nRESOURCES_DIR = ZCODE_APP / "Contents" / "Resources"\n'
         patched = mod.patch_injector(sample)
