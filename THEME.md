@@ -73,6 +73,7 @@ journalctl -u zcode-model-puller-auto.service -n 80 --no-pager
 | 日志提示 `ZCode is running` | 守护为了保护本机应用推迟安装；退出 ZCode 后等待下次检查。 |
 | 日志提示 `[Errno 2] No such file or directory: 'runuser'` | 旧自动维护器对 `/usr/sbin/runuser` 使用了错误的 PATH；更新仓库并重新执行 `bash install-auto-linux.sh install`，此操作也会清除旧版本构建失败后的重试节流记录，再 `sudo systemctl start zcode-model-puller-auto.service` 验证。 |
 | `npm WARN EBADENGINE` / `Unexpected token 'with'`，发现 Node 18 | 新版 `@electron/asar` 4.x 要求 Node ≥22.12。当前 Linux 安装器会根据独立系统账号实际使用的 Node 自动选择固定版本：Node 18 使用 `@electron/asar@3.4.1`，Node ≥22.12 使用 `@electron/asar@4.3.1`；不必为此全局升级 Node 或开放私人 nvm 目录。更新仓库后重新运行 `bash install-auto-linux.sh install`，再关闭 ZCode 触发服务检查。 |
+| 注入脚本输出「🎉 注入成功」，但外层提示 `Injection output missing or unchanged` | 旧版 ASAR 指纹检测的文件偏移多算了 4 字节，导致内容校验误报。更新到包含修复的 Fork 源码，重新执行 `bash install-auto-linux.sh install` 部署 root-owned 服务快照，然后关闭 ZCode 并触发检查。修复已覆盖 Node 18/24 的真实 ASAR 文件与完整暂存升级 CI 测试。 |
 | 主题颜色不完整 | 有些界面不是通过当前 CSS 变量绘制；浅色预设尽量搭配 ZCode 官方浅色主题。 |
 | 重新启动后恢复了默认 | 检查 Electron 渲染进程是否允许使用 localStorage，或者在多个 ZCode 数据分区之间切换。 |
 | 注入时语法/兼容校验失败 | 官方升级改变了界面/ASAR 结构；原包不会因该次校验失败而替换，可提交脱敏日志。 |
