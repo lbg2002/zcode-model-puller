@@ -41,7 +41,7 @@ For a different install root under `/opt`: `bash install-auto-linux.sh install -
 
 ## Install / reinstall after ZCode updates
 
-Put `install-linux.sh` and `linux_installer.py` **at the root of the upstream repository** (beside `inject_tool.py` and `zcode-model-puller.js`). On Ubuntu with ZCode installed at `/opt/ZCode`:
+Clone **this fork**, which already contains `install-linux.sh`, `linux_installer.py`, `inject_tool.py`, and `zcode-model-puller.js`. On Ubuntu with ZCode installed at `/opt/ZCode`:
 
 ```bash
 cd ~/git_soft/zcode-model-puller
@@ -106,4 +106,4 @@ python3 -m unittest discover -s tests -v
 
 ## Upstream preservation
 
-The existing macOS `install.sh`, `uninstall.sh` and launchd watcher stay unchanged. Linux users run `./install-linux.sh` instead. If you fork the upstream repository, copy these two scripts, this documentation and the `tests/` folder into the fork, then commit/push. Keep the original MIT copyright/license. For auto-maintenance, also include `auto_maintain.py`, `auto_builder.py`, and `install-auto-linux.sh`.
+This repository is a downstream MIT-licensed fork of [HHQ-666/zcode-model-puller](https://github.com/HHQ-666/zcode-model-puller). The original macOS `install.sh`, `uninstall.sh` and launchd watcher remain in the tree. Linux users should use `bash install-linux.sh` or opt in to `bash install-auto-linux.sh install`. Never run the macOS `./install.sh` on Ubuntu; it tries to install a launchd watcher. See [README.md](README.md), [CHANGELOG.md](CHANGELOG.md), and [SECURITY.md](SECURITY.md) for verified features and publication caveats.
