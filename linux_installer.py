@@ -26,6 +26,34 @@ STATE = STORE / "state.json"
 INJECTED_ENTRY = ("out", "renderer", "zcode-model-puller.js")
 THEME_ENTRY = ("out", "renderer", "zcode-theme-manager.js")
 
+# Pin specific ASAR CLI releases to avoid breaking builds when npm's latest
+# release raises its Node.js minimum version. v4 needs Node >=22.12;
+# v3.4.1 works with Ubuntu's system Node 18.
+ASAR_MODERN = "@electron/asar@4.3.1"
+ASAR_NODE18 = "@electron/asar@3.4.1"
+
+
+def asar_package_for_node(version: str) -> str:
+    """Select a compatible pinned ASAR CLI for the *effective* Node runtime."""
+    cleaned = version.strip().lstrip("v")
+    parts = cleaned.split(".")
+    try:
+        major, minor = int(parts[0]), int(parts[1])
+    except (ValueError, IndexError) as exc:
+        raise ValueError(f"Cannot parse Node.js version: {version!r}") from exc
+    if major < 18:
+        raise RuntimeError("Node.js >=18 is required by the Linux installer")
+    return ASAR_MODERN if (major, minor) >= (22, 12) else ASAR_NODE18
+
+
+def active_asar_package(env: dict | None = None) -> tuple[str, str]:
+    """Probe Node as the current user, rather than trusting the caller's nvm PATH."""
+    result = subprocess.run(["node", "--version"], check=True, capture_output=True,
+                            text=True, env=env, timeout=15)
+    version = result.stdout.strip()
+    return asar_package_for_node(version), version
+
+
 
 def log(message: str) -> None:
     print(message, flush=True)
@@ -116,6 +144,13 @@ def ensure_expected_layout(asar: Path) -> None:
         raise ValueError("ZCode resources layout mismatch: " + ", ".join(missing))
 
 
+def pin_asar_invocations(source: str) -> str:
+    """Only modify the staged copy; upstream macOS injector remains untouched."""
+    needle = '["npx", "--yes", "@electron/asar",'
+    replacement = '["npx", "--yes", os.environ.get("ZCODE_PULLER_ASAR_PACKAGE", "@electron/asar"),'
+    return source.replace(needle, replacement)
+
+
 def patch_injector(text: str) -> str:
     """Repoint a copy of the upstream injector, never modify the local source."""
     original = (
@@ -127,7 +162,7 @@ def patch_injector(text: str) -> str:
         'RESOURCES_DIR = ZCODE_APP / "resources"'
     )
     if original in text:
-        return text.replace(original, replacement, 1)
+        return pin_asar_invocations(text.replace(original, replacement, 1))
     # Also work if the user previously applied the Linux path patch manually.
     alternative = (
         'ZCODE_APP = Path(os.environ.get(\n'
@@ -142,9 +177,9 @@ def patch_injector(text: str) -> str:
         ')'
     )
     if alternative in text:
-        return text.replace(alternative, replacement, 1)
+        return pin_asar_invocations(text.replace(alternative, replacement, 1))
     if replacement in text:
-        return text
+        return pin_asar_invocations(text)
     raise ValueError("Unsupported inject_tool.py version. Cannot safely patch its ZCode paths")
 
 
@@ -220,6 +255,9 @@ def prepare_injection(source: Path, unpacked: Path, stage: Path) -> tuple[Path, 
     env = dict(os.environ)
     env["ZCODE_PATH"] = str(stage / "ZCode")
     env["ZCODE_PULLER_ENABLE_THEME"] = "1"
+    pkg, runtime = active_asar_package(env)
+    env["ZCODE_PULLER_ASAR_PACKAGE"] = pkg
+    log(f"📦 Node {runtime}; pinned ASAR CLI: {pkg}")
     log("🚀 Running the upstream injection and full ASAR verification in user-writable staging...")
     run([sys.executable, str(tools_dir / "inject_tool.py")], env=env)
 
