@@ -2,6 +2,43 @@
 
 This is a Linux add-on for the upstream repository <https://github.com/HHQ-666/zcode-model-puller> (MIT licensed). It keeps upstream's injection/ASAR verification algorithm intact, but runs it against an unprivileged staging copy instead of the installed ZCode application.
 
+## Full lifecycle: automatic maintenance with systemd (opt-in)
+
+Install the **system service and timer once** (normal manual one-shot installation above also remains available):
+
+```bash
+cd ~/git_soft/zcode-model-puller
+bash install-auto-linux.sh install
+bash install-auto-linux.sh status
+```
+
+The setup asks for your administrator password **once**. Every subsequent timer-based reinstall is unattended; no scheduled or background sudo password prompt is needed. A root-owned copy of the maintenance code is installed in `/usr/local/lib/zcode-model-puller-auto/`; the timer (`zcode-model-puller-auto.timer`) starts automatically at boot and checks approximately **every five minutes**. It detects an ASAR that was replaced by an apt/deb update **or another updater**, and invokes the original injection logic **as a dedicated unprivileged `zcode-puller` system user**. Only after the original ASAR has been backed up, the staged injection verified, and the original release rechecked for changes does the root service publish the validated new resources. It skips ASARs already containing the injected marker (including pre-existing manual injections). No sudo prompts occur on subsequent timer runs.
+
+When ZCode is updated, **restart the app after the watcher repairs its ASAR** to load the button. The watcher does not kill or restart ZCode or change your custom provider configuration. It also does not automatically update this plugin's GitHub code; the system service executes a snapshot of the code you reviewed at setup time.
+
+```bash
+# Trigger a check immediately (useful after ZCode updates)
+sudo systemctl start zcode-model-puller-auto.service
+# Check the timer
+systemctl list-timers --all zcode-model-puller-auto.timer
+# Read injection failures or successes
+journalctl -u zcode-model-puller-auto.service -n 100 --no-pager
+# Stop the watcher but keep the current injected client and backups
+bash install-auto-linux.sh remove
+# Restore the exact last official version, if *this system service* injected it;
+# also disables the automatic timer to prevent immediate re-injection.
+# Fully quit ZCode before running this command.
+bash install-auto-linux.sh restore
+```
+
+For a different install root under `/opt`: `bash install-auto-linux.sh install --zcode-path /opt/AnotherZCode`. For other paths, use the manual installer instead. If you change the plugin's own source, re-run `bash install-auto-linux.sh install` to update the root-owned service snapshot. The timer never blindly git-pulls arbitrary code with administrator privileges.
+
+**Node.js environment:** the setup records the currently resolved `npx` binary directory and makes it available to the unprivileged builder. Node and npx must both be reachable/readable to the dedicated system user; if you installed Node via conda or nvm in a private home directory, systemd's unprivileged builder may not access it. A system-wide Node.js installation is most reliable. Inspect the journal if `npx` cannot run. The first build can require access to npm to install `@electron/asar` into its separate worker cache.
+
+**Scope and safeguards:** use only on a machine you administer and only after reviewing the MIT-licensed upstream injector. The system timer does NOT repair an incompatible major ZCode update by bypassing safety checks: failures are logged and retried on future runs, leaving the official installation unmodified until validation succeeds. systemd status may show a failed run, but the timer remains enabled. Automatic writing of ZCode program resources requires root authority, so enabling the service is a considered security decision. The installer never runs the untrusted `npx` or upstream injection script as root.
+
+---
+
 ## Install / reinstall after ZCode updates
 
 Put `install-linux.sh` and `linux_installer.py` **at the root of the upstream repository** (beside `inject_tool.py` and `zcode-model-puller.js`). On Ubuntu with ZCode installed at `/opt/ZCode`:
@@ -21,7 +58,7 @@ If ZCode is installed somewhere else:
 ZCODE_PATH=/path/to/ZCode ./install-linux.sh
 ```
 
-On each ZCode `.deb`/`apt` update, run **the same command**. The script recognizes a currently injected ASAR and leaves it untouched; after an `apt` update replaces ASAR, it automatically processes the new original version. It does **not** run any resident watch/daemon and does **not** automatically reinstall after an update; invoke it yourself.
+On each ZCode `.deb`/`apt` update, run **the same command**. The script recognizes a currently injected ASAR and leaves it untouched; after an `apt` update replaces ASAR, it automatically processes the new original version. It does **not** automatically reinstall unless you opt in to the systemd timer above.
 
 ## How it works
 
@@ -56,7 +93,7 @@ To restore your **pre-existing manual** injection right now, use the manual back
 
 - This script supports the standard Linux Electron layout `<ZCODE_PATH>/resources/app.asar`; it does not target AppImage, Flatpak or Snap automatically.
 - The upstream injector currently depends on dynamic anchors specific to ZCode 3.12+; an incompatible future ZCode update may fail during staging. The official installation is left intact if injection/validation fails.
-- This is **manual**, one-command reinjection after updates, not a background service.
+- Manual one-command reinstalls and opt-in automatic systemd maintenance are both supported.
 - Installing a new version of the *plugin itself* without a ZCode update is not implemented while the client is already injected. Avoid stacking repeated modifications on a patched ASAR.
 - Closing ZCode before asset replacement is essential, as the running Electron process may still depend on open native modules. Best practice: exit ZCode before invoking the installer.
 - This Linux add-on has unit tests for path patching, ASAR format, backup, install/restore, and rollback. Tests cannot substitute for an end-to-end test on your exact ZCode release.
@@ -64,9 +101,9 @@ To restore your **pre-existing manual** injection right now, use the manual back
 ## Testing
 
 ```bash
-python3 -m unittest discover -s tests -p 'test_linux_installer.py' -v
+python3 -m unittest discover -s tests -v
 ```
 
 ## Upstream preservation
 
-The existing macOS `install.sh`, `uninstall.sh` and launchd watcher stay unchanged. Linux users run `./install-linux.sh` instead. If you fork the upstream repository, copy these two scripts, this documentation and the `tests/` folder into the fork, then commit/push. Keep the original MIT copyright/license.
+The existing macOS `install.sh`, `uninstall.sh` and launchd watcher stay unchanged. Linux users run `./install-linux.sh` instead. If you fork the upstream repository, copy these two scripts, this documentation and the `tests/` folder into the fork, then commit/push. Keep the original MIT copyright/license. For auto-maintenance, also include `auto_maintain.py`, `auto_builder.py`, and `install-auto-linux.sh`.
