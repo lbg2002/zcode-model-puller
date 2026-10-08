@@ -6,7 +6,7 @@
 (() => {
   'use strict';
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
-  const VERSION = '1.0.0';
+  const VERSION = '1.1.0';
   const STORAGE_KEY = 'zcode-puller-theme-v1';
   const COLOR_KEYS = ['background', 'sidebar', 'panel', 'card', 'foreground', 'accent', 'border'];
   const LABELS = { background: '主背景', sidebar: '侧边栏', panel: '面板 / 顶栏', card: '卡片', foreground: '正文文字', accent: '强调颜色', border: '边框' };
@@ -43,7 +43,6 @@
   let committed = readStored();
   let draft = null;
   let modal = null;
-  let launcher = null;
   let lastFocus = null;
 
   const tokens = `
@@ -67,10 +66,16 @@
       --color-surface-hover: var(--zpt-highlight) !important;
       --color-sidebar-border: var(--zpt-border) !important;
     }
-    #zpt-launcher { position: fixed; bottom: 20px; right: 20px; z-index: 90000; min-width: 44px; height: 44px; padding: 0 12px; display: flex; align-items: center; gap: 8px; justify-content: center; border-radius: 14px; color: #e9efff; background: #252a38; border: 1px solid #626b81; box-shadow: 0 8px 25px #0004; font: 600 12px/1.2 system-ui,sans-serif; cursor: pointer; transition: transform .15s, background .15s; }
-    #zpt-launcher:hover { transform: translateY(-2px); background: #343c50; }
-    #zpt-launcher:focus-visible, .zpt-overlay button:focus-visible, .zpt-overlay input:focus-visible { outline: 2px solid #80bfff; outline-offset: 3px; }
-    #zpt-launcher svg { width: 19px; height: 19px; flex-shrink: 0; }
+    /* Integrated in ZCode Settings > Appearance, never fixed over the workspace. */
+    #zpt-settings-row { padding: 12px 16px; border-top: 1px solid var(--color-border, #454d60); color: var(--color-foreground, #e6eaf4); }
+    .zpt-settings-layout { display: grid; grid-template-columns: minmax(0,1fr) 192px; align-items: center; gap: 16px; }
+    .zpt-settings-title { font-size: var(--ui-font-size, 14px); font-weight: 500; line-height: 1.5; }
+    .zpt-settings-desc { margin-top: 4px; font-size: var(--ui-font-size, 14px); line-height: 1.6; color: var(--color-foreground-subtle, #9ca3af); }
+    #zpt-settings-open { display: inline-flex; justify-content: center; align-items: center; gap: 7px; width: 100%; min-height: 36px; border-radius: 9px; padding: 6px 11px; border: 1px solid var(--color-border, #454d60); background: var(--color-surface, #293144); color: var(--color-foreground, #e6eaf4); font: inherit; cursor: pointer; }
+    #zpt-settings-open:hover { background: var(--color-surface-hover, #343c50); }
+    #zpt-settings-open:focus-visible { outline: 2px solid var(--color-brand, #7AA2F7); outline-offset: 2px; }
+    #zpt-settings-open svg { flex: none; width: 16px; height: 16px; }
+    @media (max-width: 590px) { .zpt-settings-layout { grid-template-columns: minmax(0,1fr); gap: 10px; } }
     .zpt-overlay, .zpt-overlay * { box-sizing: border-box; }
     .zpt-overlay { position: fixed; inset: 0; z-index: 950000; display: flex; align-items: center; justify-content: center; background: #0009; backdrop-filter: blur(7px); padding: 20px; font-family: system-ui,-apple-system,"Noto Sans CJK SC",sans-serif; color: #e6eaf4; }
     .zpt-dialog { width: min(840px,100%); max-height: min(90vh,820px); overflow: auto; background: #191d29; border: 1px solid #465067; border-radius: 20px; box-shadow: 0 30px 90px #0009; }
@@ -108,8 +113,6 @@
     .zpt-primary { background: #82aaff; color: #101727; border-color: #82aaff; }
     .zpt-reset { color: #cad5e9; }
     .zpt-status { min-height: 15px; color: #a8b9d6; font-size: 11px; }
-    @media(max-width: 650px) { .zpt-dialog { max-height: 92vh; }.zpt-content { grid-template-columns: 1fr; padding: 16px; } .zpt-header { padding: 19px 16px 13px; }.zpt-footer { padding: 14px 16px; } #zpt-launcher { right: 12px; bottom: 12px; }.zpt-presets { grid-template-columns: repeat(2,minmax(0,1fr)); } }
-    @media(prefers-reduced-motion: reduce) { #zpt-launcher { transition: none; } }
   `;
   function setupCss() {
     if (document.getElementById('zpt-theme-styles')) return;
@@ -130,7 +133,7 @@
       root.setAttribute('data-zpt-theme-active', 'true');
       root.setAttribute('data-zpt-theme-preset', p.preset);
     }
-    if (launcher) launcher.title = p ? `主题管理 · ${PRESETS[p.preset].name}` : '主题管理 · 官方默认';
+    refreshSettingsLabel();
   }
   const palette = (theme) => theme ? theme.colors : PRESETS[DEFAULT_PRESET].colors;
   function presetMarkup(id, p) {
@@ -162,7 +165,7 @@
     }
     modal.remove(); modal = null; draft = null;
     applyTheme(committed);
-    if (lastFocus?.isConnected) lastFocus.focus(); else launcher?.focus();
+    if (lastFocus?.isConnected) lastFocus.focus();
   }
   function resetToOfficial() {
     persist(null);
@@ -211,21 +214,53 @@
     previewAndControls();
     modal.querySelector('.zpt-close').focus();
   }
+  function themeSummary() {
+    return committed ? `当前：${PRESETS[committed.preset].name}${committed.custom ? '（自定义）' : ''}` : '当前：跟随 ZCode 官方主题';
+  }
+  function refreshSettingsLabel() {
+    const label = document.getElementById('zpt-settings-current');
+    if (label) label.textContent = themeSummary();
+  }
+  function mountSettingsEntry() {
+    // ZCode keeps its settings page in a React subtree. The stable
+    // data-active-section attribute identifies Settings > Appearance.
+    // Append only inside its first interface settings card, never to body.
+    const content = document.querySelector('[data-active-section="appearance"] .space-y-0.px-0');
+    if (!content || content.querySelector('#zpt-settings-row')) {
+      refreshSettingsLabel();
+      return;
+    }
+    const row = document.createElement('div');
+    row.id = 'zpt-settings-row';
+    row.innerHTML = `
+      <div class="zpt-settings-layout">
+        <div>
+          <div class="zpt-settings-title">自定义主题</div>
+          <div class="zpt-settings-desc" id="zpt-settings-current"></div>
+        </div>
+        <button id="zpt-settings-open" type="button" aria-label="打开自定义主题管理器">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 8h.01M15 7h.01M17 13h.01M9 16h.01"/><path d="M13 17c0 2 4 3 4 0"/></svg>
+          管理主题
+        </button>
+      </div>`;
+    row.querySelector('#zpt-settings-open').addEventListener('click', openModal);
+    content.appendChild(row);
+    refreshSettingsLabel();
+  }
   function start() {
     if (window.__ZCODE_THEME_MANAGER_LOADED__) return;
     window.__ZCODE_THEME_MANAGER_LOADED__ = VERSION;
     setupCss();
-    launcher = document.createElement('button');
-    launcher.id = 'zpt-launcher'; launcher.type = 'button';
-    launcher.setAttribute('aria-label', '打开 ZCode 主题管理器');
-    launcher.innerHTML = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 8h.01M15 7h.01M17 13h.01M9 16h.01"/><path d="M13 17c0 2 4 3 4 0"/></svg><span>主题</span>`;
-    launcher.addEventListener('click', openModal);
-    document.body.appendChild(launcher);
     applyTheme(committed);
+    // React can recreate the appearance card on navigation/theme changes.
+    // Reattach to the new card only when missing; no permanent floating UI.
+    mountSettingsEntry();
+    const observer = new MutationObserver(mountSettingsEntry);
+    observer.observe(document.body, { childList: true, subtree: true });
   }
   // Lightweight test hook; tests set this before importing to avoid mounting any UI.
   if (window.__ZPT_TEST_MODE__) {
-    window.__ZPT_TEST_API__ = { PRESETS, COLOR_KEYS, valid, makePreset, readStored, persist, applyTheme, isHex, getCommitted: () => committed };
+    window.__ZPT_TEST_API__ = { PRESETS, COLOR_KEYS, valid, makePreset, readStored, persist, applyTheme, isHex, getCommitted: () => committed, mountSettingsEntry, themeSummary };
     return;
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
