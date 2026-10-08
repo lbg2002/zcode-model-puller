@@ -24,6 +24,7 @@ CACHE_HOME = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache")))
 STORE = DATA_HOME / "zcode-model-puller-linux"
 STATE = STORE / "state.json"
 INJECTED_ENTRY = ("out", "renderer", "zcode-model-puller.js")
+THEME_ENTRY = ("out", "renderer", "zcode-theme-manager.js")
 
 
 def log(message: str) -> None:
@@ -68,6 +69,40 @@ def has_entry(asar: Path, parts: tuple[str, ...]) -> bool:
 
 def injected(asar: Path) -> bool:
     return has_entry(asar, INJECTED_ENTRY)
+
+
+def theme_installed(asar: Path) -> bool:
+    return has_entry(asar, THEME_ENTRY)
+
+
+def theme_up_to_date(asar: Path, expected: Path | None = None) -> bool:
+    """Compare the exact archived theme script with reviewed local source.
+
+    Unlike a filename-only check, this also supports future theme code updates
+    without blindly stacking modifications on main/preload.
+    """
+    expected = expected or HERE / "zcode-theme-manager.js"
+    if not expected.is_file():
+        return False
+    try:
+        header = asar_header(asar)
+        entry = header
+        for part in THEME_ENTRY:
+            entry = entry["files"][part]
+        if entry.get("unpacked"):
+            return False
+        size = int(entry["size"])
+        offset = int(entry["offset"])
+        if size < 1 or size > 4 * 1024 * 1024 or offset < 0:
+            return False
+        with asar.open("rb") as stream:
+            stream.seek(8)
+            header_size = int.from_bytes(stream.read(4), "little")
+            stream.seek(16 + header_size + offset)
+            bundled = stream.read(size)
+        return len(bundled) == size and hashlib.sha256(bundled).digest() == bytes.fromhex(sha256(expected))
+    except (OSError, ValueError, TypeError, KeyError, OverflowError):
+        return False
 
 
 def ensure_expected_layout(asar: Path) -> None:
@@ -159,7 +194,7 @@ def backup_source(source: Path, unpacked: Path) -> tuple[Path, str]:
             shutil.rmtree(partial_dir)
         shutil.copytree(unpacked, partial_dir, symlinks=True)
         os.replace(partial_dir, backup_unpacked)
-    log(f"✅ Official resources saved: {backup_dir}")
+    log(f"✅ Pre-installation resources saved: {backup_dir}")
     return backup_dir, original_hash
 
 
@@ -174,20 +209,23 @@ def prepare_injection(source: Path, unpacked: Path, stage: Path) -> tuple[Path, 
     tools_dir.mkdir()
     script = HERE / "inject_tool.py"
     js_file = HERE / "zcode-model-puller.js"
-    if not script.is_file() or not js_file.is_file():
-        raise FileNotFoundError("Place install-linux.sh and linux_installer.py in the upstream repository root")
+    theme_file = HERE / "zcode-theme-manager.js"
+    if not script.is_file() or not js_file.is_file() or not theme_file.is_file():
+        raise FileNotFoundError("Missing injector, model puller, or theme manager asset")
     patched = patch_injector(script.read_text(encoding="utf-8"))
     (tools_dir / "inject_tool.py").write_text(patched, encoding="utf-8")
     shutil.copy2(js_file, tools_dir / js_file.name)
+    shutil.copy2(theme_file, tools_dir / theme_file.name)
 
     env = dict(os.environ)
     env["ZCODE_PATH"] = str(stage / "ZCode")
+    env["ZCODE_PULLER_ENABLE_THEME"] = "1"
     log("🚀 Running the upstream injection and full ASAR verification in user-writable staging...")
     run([sys.executable, str(tools_dir / "inject_tool.py")], env=env)
 
     result = staged_resources / "app.asar"
-    if not injected(result):
-        raise RuntimeError("Staged app.asar has no injection marker")
+    if not injected(result) or not theme_up_to_date(result):
+        raise RuntimeError("Staged app.asar is missing the model puller or theme manager")
     if sha256(result) == sha256(source):
         raise RuntimeError("ASAR did not change")
     result_unpacked = staged_resources / "app.asar.unpacked"
@@ -252,11 +290,13 @@ def install_files(src_asar: Path, src_unpack: Path, res: Path) -> None:
             log(f"ℹ️ Staged directory remains: {next_unpack}")
 
 
-def restore_files(backup_dir: Path, res: Path) -> None:
+def restore_files(backup_dir: Path, res: Path, allow_injected: bool = False) -> None:
     original = backup_dir / "app.asar"
     original_unpack = backup_dir / "app.asar.unpacked"
-    if not original.is_file() or injected(original):
+    if not original.is_file() or (injected(original) and not allow_injected):
         raise RuntimeError("Backup missing or not a pristine ASAR")
+    if theme_installed(original) and not allow_injected:
+        raise RuntimeError("Refusing to restore a theme-injected backup")
     next_asar = res / "app.asar.puller-restore"
     next_unpack = res / "app.asar.unpacked.puller-restore"
     former_unpack = res / "app.asar.unpacked.puller-pre-restore"
@@ -324,7 +364,7 @@ def main() -> int:
     state = state_read()
 
     if args.command == "status":
-        log(f"ZCode: {app}\nInjection: {'installed' if is_patched else 'not installed'}")
+        log(f"ZCode: {app}\nModel puller: {'installed' if is_patched else 'not installed'}\nTheme manager: {'current' if theme_up_to_date(source) else ('outdated' if theme_installed(source) else 'not installed')}")
         if state.get("installed_sha256"):
             log(f"Recorded ASAR: {'match' if sha256(source) == state['installed_sha256'] else 'changed'}")
         return 0
@@ -339,18 +379,20 @@ def main() -> int:
         if sha256(backup / "app.asar") != state["original_sha256"]:
             raise RuntimeError("Backup SHA-256 mismatch")
         log("⚠️ Close ZCode completely before restoring. Restoring from original backup...")
-        restore_files(backup, resources)
-        if injected(source):
-            raise RuntimeError("Post-restore validation failed")
+        baseline_patched = bool(state.get("baseline_was_injected", False))
+        restore_files(backup, resources, allow_injected=baseline_patched)
+        if sha256(source) != state["original_sha256"]:
+            raise RuntimeError("Post-restore validation failed: pre-installation hash mismatch")
         state_write({**state, "restored_at": dt.datetime.now(dt.timezone.utc).isoformat(),
                      "installed_sha256": None})
-        log("✅ Original ZCode restored; your user configuration is untouched")
+        log("✅ Exact pre-installation ZCode resources restored; your configuration is untouched")
         return 0
 
-    if is_patched:
-        log("✅ ZCode is already injected; nothing to do. After an apt upgrade, run this same command again.")
-        log("ℹ️ This does not update an existing injection's plugin JS. See LINUX.md for upgrade notes.")
+    if is_patched and theme_up_to_date(source):
+        log("✅ Model puller and theme manager already installed; nothing to do.")
         return 0
+    if is_patched:
+        log("ℹ️ Upgrading existing model-puller injection to include theme manager using a staged repack")
 
     for executable in ("python3", "node", "npx", "sudo"):
         if not shutil.which(executable):
@@ -358,6 +400,7 @@ def main() -> int:
 
     # Backup is performed before any build or privileged write.
     backup_dir, original_hash = backup_source(source, unpacked)
+    baseline_was_injected = is_patched
     CACHE_HOME.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="zcode-puller-stage-", dir=CACHE_HOME) as folder:
         stage = Path(folder)
@@ -366,12 +409,13 @@ def main() -> int:
         log("⚠️ Close ZCode completely now; replacing its resources requires sudo.")
         install_files(result_asar, result_unpack, resources)
 
-    if not injected(source) or sha256(source) != injected_hash:
+    if not injected(source) or not theme_up_to_date(source) or sha256(source) != injected_hash:
         raise RuntimeError("Post-installation validation failed! See backup and restore instructions in LINUX.md")
     state_write({
         "target": str(app),
         "backup_dir": str(backup_dir),
         "original_sha256": original_hash,
+        "baseline_was_injected": baseline_was_injected,
         "installed_sha256": injected_hash,
         "installed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
     })
