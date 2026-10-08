@@ -7,3 +7,16 @@ __pycache__/
 node_modules/
 dist/
 build/
+
+# Local credentials and ZCode application state
+.env
+.env.local
+.zcode/
+provider_config.json
+
+# Large local application / staging outputs
+*.asar
+*.asar.unpacked/
+*.log
+.pytest_cache/
+.venv/
