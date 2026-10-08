@@ -28,7 +28,7 @@ UNIT_DIR = Path('/etc/systemd/system')
 SERVICE = 'zcode-model-puller-auto.service'
 TIMER = 'zcode-model-puller-auto.timer'
 SERVICE_USER = 'zcode-puller'
-SOURCE_FILES = ('auto_maintain.py', 'auto_builder.py', 'linux_installer.py', 'inject_tool.py', 'zcode-model-puller.js')
+SOURCE_FILES = ('auto_maintain.py', 'auto_builder.py', 'linux_installer.py', 'inject_tool.py', 'zcode-model-puller.js', 'zcode-theme-manager.js')
 
 
 def say(message):
@@ -73,6 +73,26 @@ def no_symlink(path: Path):
         raise RuntimeError(f'Refusing symbolic-link target: {path}')
 
 
+def zcode_process_running(app: Path) -> bool:
+    """Avoid swapping Electron's ASAR/native modules while the application is running."""
+    app = app.resolve()
+    try:
+        for item in Path('/proc').iterdir():
+            if not item.name.isdecimal():
+                continue
+            try:
+                target = os.readlink(item / 'exe').removesuffix(' (deleted)')
+                if Path(target).resolve().is_relative_to(app):
+                    return True
+            except (OSError, ValueError):
+                continue
+    except OSError:
+        return False
+    return False
+
+
+
+
 def copy_native(source: Path, dest: Path) -> None:
     """Copy native files without accepting symlinks in privileged publication."""
     if not source.is_dir() or source.is_symlink():
@@ -110,22 +130,26 @@ def backup_pristine(resources: Path, hash_before: str):
             copy_native(native, backup / 'app.asar.unpacked')
     if digest(target) != hash_before:
         raise RuntimeError('Pristine backup has invalid SHA256')
-    say(f'Backed up pristine ZCode into {backup}')
+    say(f'Backed up pre-installation ZCode into {backup}')
     return backup
 
 
 def publish_built(resources: Path, stage: Path, hash_before: str):
     """Publish validated build using fixed resource names, ASAR last."""
-    from linux_installer import injected
+    from linux_installer import injected, theme_up_to_date
     fresh = stage / 'ZCode/resources/app.asar'
     fresh_native = stage / 'ZCode/resources/app.asar.unpacked'
-    if not injected(fresh):
-        raise RuntimeError('Refusing to publish ASAR without injection marker')
+    if not injected(fresh) or not theme_up_to_date(fresh):
+        raise RuntimeError('Refusing to publish ASAR without model puller and theme manager')
     fresh_hash = digest(fresh)
     if fresh_hash == hash_before:
         raise RuntimeError('Build did not change ASAR')
     if digest(resources / 'app.asar') != hash_before:
         raise RuntimeError('ZCode changed during build; skipping this run')
+    baseline = STATE_ROOT / 'backups' / hash_before / 'app.asar'
+    if not baseline.is_file() or digest(baseline) != hash_before:
+        raise RuntimeError('Verified pre-installation backup is required before publishing')
+    baseline_was_injected = injected(baseline)
 
     nxt = resources / 'app.asar.puller-auto-next'
     next_native = resources / 'app.asar.unpacked.puller-auto-next'
@@ -170,6 +194,7 @@ def publish_built(resources: Path, stage: Path, hash_before: str):
         if next_native.exists():
             shutil.rmtree(next_native)
     record = {'target': str(resources.parent), 'original_sha256': hash_before,
+              'baseline_was_injected': baseline_was_injected,
               'installed_sha256': fresh_hash,
               'backup_dir': str(STATE_ROOT / 'backups' / hash_before)}
     statefile = STATE_ROOT / 'active.json'
@@ -238,7 +263,7 @@ def restore_active():
     active.unlink()
     # To keep ZCode pristine, disable automatic reinjection as part of restore.
     execute(['systemctl', 'disable', '--now', TIMER])
-    say('✅ Restored exact previous pristine ZCode version; automatic watcher disabled.')
+    say('✅ Restored exact pre-installation ZCode resources; automatic watcher disabled.')
 
 
 def worker_env(home: Path, node_bin: str = ""):
@@ -250,7 +275,7 @@ def worker_env(home: Path, node_bin: str = ""):
 
 
 def run_once(config: dict):
-    from linux_installer import injected
+    from linux_installer import injected, theme_up_to_date
     app = Path(config['zcode_path']).resolve(strict=True)
     resources = app / 'resources'
     src = resources / 'app.asar'
@@ -269,8 +294,11 @@ def run_once(config: dict):
         if not snapshot_stable(src):
             say('ASAR is not stable/compatible; retry on next timer tick')
             return
-        if injected(src):
-            say('ZCode is already injected; no action needed')
+        if injected(src) and theme_up_to_date(src):
+            say('ZCode model puller + theme manager already installed; no action needed')
+            return
+        if zcode_process_running(app):
+            say('ZCode is running; defer theme upgrade until the app exits')
             return
         binaries = worker_env(Path('/tmp'), config.get('node_bin', ''))['PATH']
         if shutil.which('runuser') is None or any(shutil.which(x, path=binaries) is None for x in ('npx', 'node')):
@@ -420,7 +448,7 @@ def main():
     elif a.action == 'restore':
         restore_active()
     elif a.action == 'status':
-        execute(['systemctl', 'list-timers', '--all', '--no-pager', TIMER])
+        execute(['systemctl', 'list-timers', '--all', TIMER])
         subprocess.run(['systemctl', 'status', TIMER, '--no-pager', '--lines=0'], check=False)
     else:
         require_root()
