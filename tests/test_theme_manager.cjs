@@ -6,7 +6,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 
 const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'zcode-theme-manager.js'), 'utf8');
-function fixture(store = {}) {
+function fixture(store = {}, documentOverrides = {}) {
   const props = new Map();
   const attrs = new Map();
   const root = {
@@ -17,7 +17,7 @@ function fixture(store = {}) {
   const storage = new Map(Object.entries(store));
   const ctx = {
     window: { __ZPT_TEST_MODE__: true },
-    document: { documentElement: root },
+    document: { documentElement: root, ...documentOverrides },
     localStorage: { getItem: (k) => storage.has(k) ? storage.get(k) : null,
       setItem: (k,v) => storage.set(k,v), removeItem: (k) => storage.delete(k) },
     console,
@@ -85,4 +85,57 @@ test('preset colors are copied, not mutated globally', () => {
   const p = api.makePreset('tokyo-night');
   p.colors.accent = '#010203';
   assert.equal(api.PRESETS['tokyo-night'].colors.accent, '#7AA2F7');
+});
+
+test('settings entry is shown only inside ZCode Appearance settings', () => {
+  const card = {
+    rows: [],
+    querySelector(selector) {
+      return selector === '#zpt-settings-row'
+        ? this.rows.find((row) => row.id === 'zpt-settings-row') || null
+        : null;
+    },
+    appendChild(row) { this.rows.push(row); },
+  };
+  let appearanceVisible = false;
+  let buttonClick;
+  let created = 0;
+  const summary = { textContent: '' };
+  const fakeButton = { addEventListener(name, handler) { if (name === 'click') buttonClick = handler; } };
+  const doc = {
+    querySelector(selector) {
+      assert.equal(selector, '[data-active-section="appearance"] .space-y-0.px-0');
+      return appearanceVisible ? card : null;
+    },
+    getElementById(id) { return id === 'zpt-settings-current' && card.rows.length ? summary : null; },
+    createElement(name) {
+      assert.equal(name, 'div');
+      created++;
+      return { id: '', innerHTML: '',
+        querySelector(selector) { return selector === '#zpt-settings-open' ? fakeButton : null; } };
+    },
+  };
+  const api = fixture({}, doc);
+  api.mountSettingsEntry();
+  assert.equal(created, 0, 'never add a floating control on ordinary pages');
+  appearanceVisible = true;
+  api.mountSettingsEntry();
+  assert.equal(created, 1);
+  assert.equal(card.rows[0].id, 'zpt-settings-row');
+  assert.match(card.rows[0].innerHTML, /自定义主题/);
+  assert.match(card.rows[0].innerHTML, /管理主题/);
+  assert.equal(typeof buttonClick, 'function');
+  assert.equal(summary.textContent, '当前：跟随 ZCode 官方主题');
+  api.mountSettingsEntry();
+  assert.equal(created, 1, 'do not duplicate the row on React updates');
+  assert.equal(api.persist(api.makePreset('nord')), true);
+});
+
+test('saved theme summary is shown on the settings row', () => {
+  const preset = { preset: 'paper', custom: true, colors: {
+    background: '#F7F8FA', sidebar: '#EBEEF3', panel: '#FFFFFF', card: '#FFFFFF',
+    foreground: '#273244', accent: '#4361EE', border: '#D8DEE9'
+  }};
+  const api = fixture({ 'zcode-puller-theme-v1': JSON.stringify(preset) });
+  assert.equal(api.themeSummary(), '当前：Paper（自定义）');
 });
