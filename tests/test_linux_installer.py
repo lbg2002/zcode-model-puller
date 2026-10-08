@@ -13,7 +13,7 @@ mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 
 
-def fake_asar(path, injected=False, omit=None):
+def fake_asar(path, injected=False, omit=None, themed=False):
     tree = {"files": {"out": {"files": {
         "main": {"files": {"index.js": {"size": 10}}},
         "preload": {"files": {"index.cjs": {"size": 10}}},
@@ -21,6 +21,8 @@ def fake_asar(path, injected=False, omit=None):
     }}}}
     if injected:
         tree["files"]["out"]["files"]["renderer"]["files"]["zcode-model-puller.js"] = {"size": 10}
+    if themed:
+        tree["files"]["out"]["files"]["renderer"]["files"]["zcode-theme-manager.js"] = {"size": 10}
     if omit:
         tree["files"]["out"]["files"][omit[0]]["files"].pop(omit[1])
     raw = json.dumps(tree).encode("utf-8")
@@ -59,6 +61,23 @@ class LinuxInstallerTests(unittest.TestCase):
         mod.ensure_expected_layout(p)
         fake_asar(p, injected=True)
         self.assertTrue(mod.injected(p))
+        self.assertFalse(mod.theme_installed(p))
+        fake_asar(p, injected=True, themed=True)
+        self.assertTrue(mod.theme_installed(p))
+
+    def test_archived_theme_fingerprint_detects_code_changes(self):
+        expected = self.root / "theme.js"
+        expected.write_text("console.log('theme v1');", encoding='utf-8')
+        packed = self.root / 'real-style.asar'
+        contents = expected.read_bytes()
+        tree = {"files": {"out": {"files": {"renderer": {"files": {
+            "zcode-theme-manager.js": {"size": len(contents), "offset": "0"}
+        }}}}}}
+        payload = json.dumps(tree).encode('utf-8')
+        packed.write_bytes(b'\0' * 8 + len(payload).to_bytes(4, 'little') + b'\0'*4 + payload + contents)
+        self.assertTrue(mod.theme_up_to_date(packed, expected))
+        expected.write_text("console.log('theme v2');", encoding='utf-8')
+        self.assertFalse(mod.theme_up_to_date(packed, expected))
 
     def test_reject_wrong_archive_shape(self):
         p = self.root / "app.asar"
@@ -128,6 +147,25 @@ RESOURCES_DIR = (
             mod.restore_files(backup, res)
         self.assertFalse(mod.injected(official))
         self.assertEqual((old_unpack / "native.node").read_text(), "old")
+
+    def test_restore_to_earlier_model_puller_injection(self):
+        res = self.root / "resources"; res.mkdir()
+        current = res / "app.asar"; fake_asar(current, injected=True, themed=True)
+        backup = self.root / "backup"; backup.mkdir()
+        fake_asar(backup / "app.asar", injected=True)
+        with patch.object(mod, "sudo", side_effect=fake_sudo):
+            mod.restore_files(backup, res, allow_injected=True)
+        self.assertTrue(mod.injected(current))
+        self.assertFalse(mod.theme_installed(current))
+
+    def test_restore_can_roll_back_previous_theme_revision(self):
+        res = self.root / "resources"; res.mkdir()
+        backup = self.root / "backup"; backup.mkdir()
+        fake_asar(backup / "app.asar", injected=True, themed=True)
+        current = res / "app.asar"; fake_asar(current, injected=True, themed=True)
+        with patch.object(mod, "sudo", side_effect=fake_sudo):
+            mod.restore_files(backup, res, allow_injected=True)
+        self.assertTrue(mod.theme_installed(current))
 
     def test_rollback_on_failed_primary_asar_move(self):
         res = self.root / "resources"; res.mkdir()
