@@ -266,6 +266,18 @@ def restore_active():
     say('✅ Restored exact pre-installation ZCode resources; automatic watcher disabled.')
 
 
+def resolve_runuser() -> str:
+    """Resolve root's account-switching executable independently of the worker PATH.
+
+    Ubuntu normally installs runuser in /usr/sbin, which is intentionally absent
+    from the unprivileged builder PATH. Pass an absolute executable path to Popen.
+    """
+    executable = shutil.which('runuser', path='/usr/sbin:/sbin:/usr/bin:/bin')
+    if not executable:
+        raise RuntimeError('Missing runuser (util-linux); expected /usr/sbin/runuser')
+    return executable
+
+
 def worker_env(home: Path, node_bin: str = ""):
     safe_path = (str(Path(node_bin)) + ":" if node_bin else "") + "/usr/local/bin:/usr/bin:/bin"
     # use system paths, not a possibly user-modified PATH from root's shell.
@@ -301,7 +313,8 @@ def run_once(config: dict):
             say('ZCode is running; defer theme upgrade until the app exits')
             return
         binaries = worker_env(Path('/tmp'), config.get('node_bin', ''))['PATH']
-        if shutil.which('runuser') is None or any(shutil.which(x, path=binaries) is None for x in ('npx', 'node')):
+        resolve_runuser()
+        if any(shutil.which(x, path=binaries) is None for x in ('npx', 'node')):
             raise RuntimeError('Missing node/npx in watcher PATH; rerun install-auto-linux.sh install')
         # Throttle incompatible builds for the same unchanged application release.
         failed = STATE_ROOT / 'failure.json'
@@ -352,7 +365,7 @@ def _run_build_and_publish(resources: Path, src: Path, source_hash: str, config:
         say('Building and verifying as unprivileged zcode-puller system user...')
         build_env = worker_env(home, config.get('node_bin', ''))
         env_args = [f'{key}={value}' for key, value in build_env.items()]
-        execute(['runuser', '-u', SERVICE_USER, '--', '/usr/bin/env',
+        execute([resolve_runuser(), '-u', SERVICE_USER, '--', '/usr/bin/env',
                  *env_args, '/usr/bin/python3', str(builder), str(stage)],
                 env=build_env, timeout=1800)
         publish_built(resources, stage, source_hash)
@@ -387,7 +400,7 @@ def install_system(config):
     # Check access as the actual dedicated builder account, not the desktop user.
     check_path = worker_env(Path('/tmp'), node_bin)['PATH']
     for tool in ('node', 'npx'):
-        execute(['runuser', '-u', SERVICE_USER, '--', '/usr/bin/env',
+        execute([resolve_runuser(), '-u', SERVICE_USER, '--', '/usr/bin/env',
                  f'PATH={check_path}', tool, '--version'], timeout=20,
                 stdout=subprocess.DEVNULL)
     LIB.mkdir(parents=True, exist_ok=True)
@@ -421,6 +434,9 @@ def install_system(config):
     (UNIT_DIR / TIMER).write_text(timer, encoding='utf-8')
     execute(['systemctl', 'daemon-reload'])
     execute(['systemctl', 'enable', '--now', TIMER])
+    # Installing a fixed service snapshot is an explicit admin retry: clear the
+    # previous build's failure throttle so fixes can be checked immediately.
+    (STATE_ROOT / 'failure.json').unlink(missing_ok=True)
     say('✅ Automatic maintenance enabled (checks about every 5 minutes).')
     say('Check: systemctl list-timers ' + TIMER)
     say('Logs: journalctl -u ' + SERVICE + ' -n 80 --no-pager')
