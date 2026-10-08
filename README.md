@@ -19,6 +19,26 @@
 
 自动维护器 **不会**自行更新此 GitHub 仓库代码，也不会自动重启 ZCode。修改了客户端资源后，需要重新启动 ZCode 才能看到效果。
 
+## 🎨 Linux 自定义主题管理器（实验性）
+
+新增独立的**主题管理**入口，与原来的「⚡ 自动拉取模型」按钮共存。打开 ZCode 后在**右下角**点击「主题」即可切换六套内置配色（Tokyo Night、Catppuccin Mocha、GitHub Dimmed、Nord、Solarized Light、Paper），精细调整背景、侧栏、面板、卡片、文字、强调色和边框；修改实时预览，点击**应用主题**保存。按 Escape/取消可撤回试色，「恢复官方默认」仅清理本插件的外观覆盖。
+
+**已安装 Model Puller 与自动守护的 Linux 用户**：
+
+```bash
+cd ~/git_soft/zcode-model-puller
+git pull --ff-only origin main
+# 先完全退出 ZCode，再更新 systemd 的受保护代码快照
+bash install-auto-linux.sh install
+sudo systemctl start zcode-model-puller-auto.service
+bash install-auto-linux.sh logs
+bash install-linux.sh status
+```
+
+完整的升级、恢复、兼容性限制及问题处理请阅读 [THEME.md](THEME.md)。自动维护器会比较 ASAR 中的主题脚本与本地已安装的脚本，仅在确有变化时尝试受校验的升级；ZCode 仍在运行时会推迟资源替换。**不会**自动从 GitHub 更新自身代码。
+
+> 主题管理器目前已经通过代码静态检查与单元测试，但尚未经其他用户的 ZCode Linux 客户端实际图形界面验证。它是非官方 CSS 变量覆盖，部分 ZCode 控件可能不会完全跟随自定义颜色；浅色预设建议先切换 ZCode 官方浅色模式。
+
 ## 界面预览
 
 ![模型列表和拉取按钮](assets/model-list-and-button.png)
