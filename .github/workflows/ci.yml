@@ -55,6 +55,8 @@ jobs:
           echo "Node: $(node --version) / ASAR: $ASAR_PACKAGE"
           mkdir -p "$RUNNER_TEMP/zpt-asar/in/out/renderer"
           printf 'hello asar\n' > "$RUNNER_TEMP/zpt-asar/in/out/renderer/index.html"
-          npx --yes "$ASAR_PACKAGE" pack "$RUNNER_TEMP/zpt-asar/in" "$RUNNER_TEMP/zpt-asar/app.asar"
+          printf 'dummy native module\n' > "$RUNNER_TEMP/zpt-asar/in/native.node"
+          npx --yes "$ASAR_PACKAGE" pack "$RUNNER_TEMP/zpt-asar/in" "$RUNNER_TEMP/zpt-asar/app.asar" --unpack '**/*{node,spawn-helper}'
+          test -f "$RUNNER_TEMP/zpt-asar/app.asar.unpacked/native.node"
           npx --yes "$ASAR_PACKAGE" extract "$RUNNER_TEMP/zpt-asar/app.asar" "$RUNNER_TEMP/zpt-asar/out"
           diff -r "$RUNNER_TEMP/zpt-asar/in" "$RUNNER_TEMP/zpt-asar/out"
