@@ -1,4 +1,4 @@
-> **🐧 Ubuntu/Linux (.deb) 一键安装**：已适配 `/opt/ZCode/resources/app.asar`。先退出 ZCode，然后在仓库根目录执行 `bash install-linux.sh`；ZCode 通过 apt 更新后重复执行相同命令即可。支持 `bash install-linux.sh status` 查看状态、`bash install-linux.sh restore` 恢复由 Linux 安装器修改的版本。请勿用 `sudo bash install-linux.sh`；脚本只在最终安装经过校验的文件时请求 sudo。详见 [Linux 安装指南](LINUX.md)。
+> **🔁 Ubuntu ZCode 更新后自动重新注入（可选）**：仓库新增 systemd 系统定时器，每约 5 分钟检测官方 `app.asar` 是否被升级覆盖，自动运行低权限构建与完整校验，并仅在通过校验后安装。首次启用在 Ubuntu 上执行 `bash install-auto-linux.sh install`（需要一次 sudo 授权），之后无需手动执行 `install-linux.sh`。使用 `bash install-auto-linux.sh status` / `logs` / `remove` 管理；具体安全约束和恢复步骤见 [Linux 自动维护](LINUX.md)。此功能仅自动处理 ZCode 更新，不会自动拉取 Fork 新代码。\n\n> **🐧 Ubuntu/Linux (.deb) 一键安装**：已适配 `/opt/ZCode/resources/app.asar`。先退出 ZCode，然后在仓库根目录执行 `bash install-linux.sh`；ZCode 通过 apt 更新后重复执行相同命令即可。支持 `bash install-linux.sh status` 查看状态、`bash install-linux.sh restore` 恢复由 Linux 安装器修改的版本。请勿用 `sudo bash install-linux.sh`；脚本只在最终安装经过校验的文件时请求 sudo。详见 [Linux 安装指南](LINUX.md)。
 
 # ⚡️ ZCode Model Puller (ZCode 自定义模型自动拉取与同步工具)
 
