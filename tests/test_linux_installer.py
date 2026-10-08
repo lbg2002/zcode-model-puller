@@ -101,17 +101,17 @@ class LinuxInstallerTests(unittest.TestCase):
 
     def test_node_probe_uses_actual_runtime(self):
         from types import SimpleNamespace
-        with patch.object(mod.subprocess, 'run', return_value=SimpleNamespace(stdout='v18.19.1\\n')) as run:
+        with patch.object(mod.subprocess, 'run', return_value=SimpleNamespace(stdout='v18.19.1\n')) as run:
             self.assertEqual(mod.active_asar_package({'PATH':'/usr/bin:/bin'}), ('@electron/asar@3.4.1', 'v18.19.1'))
             self.assertEqual(run.call_args.args[0], ['node', '--version'])
             self.assertEqual(run.call_args.kwargs['env']['PATH'], '/usr/bin:/bin')
 
     def test_staged_injector_uses_pinned_asar_package(self):
-        sample = ( 'import os\\n'
-                   'ZCODE_APP = Path("/Applications/ZCode.app")\\n'
-                   'RESOURCES_DIR = ZCODE_APP / "Contents" / "Resources"\\n'
-                   'run(["npx", "--yes", "@electron/asar", "extract", archive, directory])\\n'
-                   'run(["npx", "--yes", "@electron/asar", "pack", directory, archive])\\n')
+        sample = ( 'import os\n'
+                   'ZCODE_APP = Path("/Applications/ZCode.app")\n'
+                   'RESOURCES_DIR = ZCODE_APP / "Contents" / "Resources"\n'
+                   'run(["npx", "--yes", "@electron/asar", "extract", archive, directory])\n'
+                   'run(["npx", "--yes", "@electron/asar", "pack", directory, archive])\n')
         patched = mod.patch_injector(sample)
         self.assertIn('ZCODE_PULLER_ASAR_PACKAGE', patched)
         self.assertEqual(patched.count('os.environ.get("ZCODE_PULLER_ASAR_PACKAGE", "@electron/asar")'), 2)
