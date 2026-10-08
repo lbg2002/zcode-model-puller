@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from linux_installer import injected, theme_up_to_date, patch_injector, sha256
+from linux_installer import injected, theme_up_to_date, patch_injector, sha256, active_asar_package
 
 
 def build(stage: Path) -> None:
@@ -34,7 +34,12 @@ def build(stage: Path) -> None:
     shutil.copy2(upstream / 'zcode-model-puller.js', tools / 'zcode-model-puller.js')
     shutil.copy2(upstream / 'zcode-theme-manager.js', tools / 'zcode-theme-manager.js')
     env = dict(os.environ)
+    # The dedicated system account cannot necessarily traverse the desktop
+    # user's ~/.nvm path. Probe the executable *it really runs*.
+    asar_package, node_version = active_asar_package(env)
+    print(f"Node runtime in worker: {node_version}; ASAR CLI: {asar_package}", flush=True)
     env.update({
+        'ZCODE_PULLER_ASAR_PACKAGE': asar_package,
         'ZCODE_PATH': str(stage / 'ZCode'),
         'ZCODE_PULLER_ENABLE_THEME': '1',
         'ZCODE_PULLER_WORK_DIR': str(stage / 'build'),
