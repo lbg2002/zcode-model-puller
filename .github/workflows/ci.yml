@@ -56,7 +56,16 @@ jobs:
           mkdir -p "$RUNNER_TEMP/zpt-asar/in/out/renderer"
           printf 'hello asar\n' > "$RUNNER_TEMP/zpt-asar/in/out/renderer/index.html"
           printf 'dummy native module\n' > "$RUNNER_TEMP/zpt-asar/in/native.node"
+          cp zcode-theme-manager.js "$RUNNER_TEMP/zpt-asar/in/out/renderer/zcode-theme-manager.js"
           npx --yes "$ASAR_PACKAGE" pack "$RUNNER_TEMP/zpt-asar/in" "$RUNNER_TEMP/zpt-asar/app.asar" --unpack '**/*{node,spawn-helper}'
           test -f "$RUNNER_TEMP/zpt-asar/app.asar.unpacked/native.node"
           npx --yes "$ASAR_PACKAGE" extract "$RUNNER_TEMP/zpt-asar/app.asar" "$RUNNER_TEMP/zpt-asar/out"
           diff -r "$RUNNER_TEMP/zpt-asar/in" "$RUNNER_TEMP/zpt-asar/out"
+          python3 - "$RUNNER_TEMP/zpt-asar/app.asar" "$RUNNER_TEMP/zpt-asar/in/out/renderer/zcode-theme-manager.js" <<'PY'
+          import sys
+          from pathlib import Path
+          from linux_installer import theme_up_to_date
+          asar, theme = Path(sys.argv[1]), Path(sys.argv[2])
+          assert theme_up_to_date(asar, theme), "theme_up_to_date() rejects a real ASAR built by npm"
+          print("Verified embedded theme script matches expected source")
+          PY
