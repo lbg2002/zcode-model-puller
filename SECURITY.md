@@ -24,6 +24,10 @@ This is an **unofficial third-party modification** of ZCode's Electron applicati
 - A private nvm/Conda Node.js binary may not be readable by the service user; prefer a system-wide executable.
 - To stop the privileged timer without removing the current injection: `bash install-auto-linux.sh remove`.
 
+## Theme manager privacy and rollback
+
+The theme manager stores only its palette choice and hex colors in the isolated `zcode-puller-theme-v1` localStorage key. It does not read or transmit provider configuration or API credentials. Colors are validated against six-digit hexadecimal syntax and preset IDs are matched against explicitly enumerated own keys. Clicking **Restore official default** clears the theme overlay without editing the model config. Reverting ASAR via `restore` restores the exact baseline recorded by the corresponding Linux installer; on a machine that already had the Model Puller, that baseline can itself be an injected older version.
+
 ## Reporting security issues
 
 Do **not** post API keys, provider configuration, full home paths, or private URLs in public GitHub issues. For a suspected vulnerability, use GitHub private vulnerability reporting if enabled on this repository; otherwise contact the maintainer privately before posting a public proof of concept. Ordinary non-sensitive bugs can use the issue template.
