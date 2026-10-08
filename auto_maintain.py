@@ -420,7 +420,7 @@ def main():
     elif a.action == 'restore':
         restore_active()
     elif a.action == 'status':
-        execute(['systemctl', 'list-timers', '--all', TIMER])
+        execute(['systemctl', 'list-timers', '--all', '--no-pager', TIMER])
         subprocess.run(['systemctl', 'status', TIMER, '--no-pager', '--lines=0'], check=False)
     else:
         require_root()
