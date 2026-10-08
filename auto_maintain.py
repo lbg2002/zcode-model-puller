@@ -399,10 +399,14 @@ def install_system(config):
         raise RuntimeError('Node bin directory must be an existing absolute path')
     # Check access as the actual dedicated builder account, not the desktop user.
     check_path = worker_env(Path('/tmp'), node_bin)['PATH']
+    from linux_installer import asar_package_for_node
     for tool in ('node', 'npx'):
-        execute([resolve_runuser(), '-u', SERVICE_USER, '--', '/usr/bin/env',
-                 f'PATH={check_path}', tool, '--version'], timeout=20,
-                stdout=subprocess.DEVNULL)
+        result = execute([resolve_runuser(), '-u', SERVICE_USER, '--', '/usr/bin/env',
+                          f'PATH={check_path}', tool, '--version'], timeout=20,
+                         capture_output=True, text=True)
+        if tool == 'node':
+            actual = result.stdout.strip()
+            say(f'Effective service-account Node: {actual}; ASAR CLI: {asar_package_for_node(actual)}')
     LIB.mkdir(parents=True, exist_ok=True)
     for filename in SOURCE_FILES:
         src = HERE / filename
