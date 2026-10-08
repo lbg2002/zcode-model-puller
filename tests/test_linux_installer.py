@@ -74,7 +74,13 @@ class LinuxInstallerTests(unittest.TestCase):
             "zcode-theme-manager.js": {"size": len(contents), "offset": "0"}
         }}}}}}
         payload = json.dumps(tree).encode('utf-8')
-        packed.write_bytes(b'\0' * 8 + len(payload).to_bytes(4, 'little') + b'\0'*4 + payload + contents)
+        # Real ASAR archives start with a size Pickle (8 bytes) followed by
+        # a header Pickle. Header metadata includes two 4-byte lengths.
+        padding = (4 - len(payload) % 4) % 4
+        header_body = len(payload).to_bytes(4, 'little') + payload + b'\0' * padding
+        header_pickle = len(header_body).to_bytes(4, 'little') + header_body
+        size_pickle = (4).to_bytes(4, 'little') + len(header_pickle).to_bytes(4, 'little')
+        packed.write_bytes(size_pickle + header_pickle + contents)
         self.assertTrue(mod.theme_up_to_date(packed, expected))
         expected.write_text("console.log('theme v2');", encoding='utf-8')
         self.assertFalse(mod.theme_up_to_date(packed, expected))
