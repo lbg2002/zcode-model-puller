@@ -28,6 +28,8 @@ UNPACKED_DIR = RESOURCES_DIR / "app.asar.unpacked"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PULLER_JS_FILE = SCRIPT_DIR / "zcode-model-puller.js"
+THEME_JS_FILE = SCRIPT_DIR / "zcode-theme-manager.js"
+ENABLE_THEME = os.environ.get("ZCODE_PULLER_ENABLE_THEME") == "1"
 
 WORK_DIR = Path("/tmp/zcode_inject_build")
 TEMP_ASAR = Path("/tmp/zcode_repacked.asar")
@@ -243,6 +245,11 @@ def verify_packed_asar(asar_path: Path):
         checks["index.html 入口"] = index_html.exists() and "zcode-model-puller.js" in index_html.read_text(
             encoding="utf-8", errors="replace"
         )
+        if ENABLE_THEME:
+            checks["主题管理 JS"] = "out/renderer/zcode-theme-manager.js" in entries
+            checks["主题管理入口"] = index_html.exists() and "zcode-theme-manager.js" in index_html.read_text(
+                encoding="utf-8", errors="replace"
+            )
         shutil.rmtree(extract_dir, ignore_errors=True)
     else:
         checks["解包复核"] = False
@@ -316,6 +323,9 @@ def _install_injection_locked():
         return False
 
     renderer_dir = WORK_DIR / "out" / "renderer"
+    if ENABLE_THEME and not THEME_JS_FILE.is_file():
+        print("❌ 未找到主题管理器源码:", THEME_JS_FILE)
+        return False
     preload_cjs = WORK_DIR / "out" / "preload" / "index.cjs"
     main_js = WORK_DIR / "out" / "main" / "index.js"
     index_html = renderer_dir / "index.html"
@@ -330,6 +340,12 @@ def _install_injection_locked():
     if not syntax_check(renderer_dir / "zcode-model-puller.js", "renderer 注入脚本"):
         return False
     print("  ✅ 已写入前端注入脚本")
+    if ENABLE_THEME:
+        theme_target = renderer_dir / "zcode-theme-manager.js"
+        shutil.copy2(THEME_JS_FILE, theme_target)
+        if not syntax_check(theme_target, "主题管理器"):
+            return False
+        print("  ✅ 已写入 ZCode 主题管理器")
 
     html_content = index_html.read_text(encoding="utf-8")
     script_tag = '<script type="module" src="./zcode-model-puller.js"></script>'
@@ -342,6 +358,17 @@ def _install_injection_locked():
         print("  ✅ 已在 index.html 中挂载启动入口")
     else:
         print("  ℹ️ index.html 已包含启动入口")
+
+    if ENABLE_THEME:
+        theme_tag = '<script type="module" src="./zcode-theme-manager.js"></script>'
+        html_content = index_html.read_text(encoding="utf-8")
+        if theme_tag not in html_content:
+            if "</body>" not in html_content:
+                print("❌ index.html 找不到 </body>，无法挂载主题管理器")
+                return False
+            html_content = html_content.replace("</body>", f"  {theme_tag}\n  </body>", 1)
+            index_html.write_text(html_content, encoding="utf-8")
+            print("  ✅ 已在 index.html 挂载主题管理器")
 
     # 2. preload 扩展
     preload_content = preload_cjs.read_text(encoding="utf-8")
