@@ -113,6 +113,7 @@
     .zpt-primary { background: #82aaff; color: #101727; border-color: #82aaff; }
     .zpt-reset { color: #cad5e9; }
     .zpt-status { min-height: 15px; color: #a8b9d6; font-size: 11px; }
+    @media (max-width: 650px) { .zpt-dialog { max-height: 92vh; } .zpt-content { grid-template-columns: 1fr; padding: 16px; } .zpt-header { padding: 19px 16px 13px; } .zpt-footer { padding: 14px 16px; } .zpt-presets { grid-template-columns: repeat(2,minmax(0,1fr)); } }
   `;
   function setupCss() {
     if (document.getElementById('zpt-theme-styles')) return;
