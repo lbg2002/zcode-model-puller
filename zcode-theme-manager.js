@@ -24,7 +24,7 @@
   const isHex = (s) => typeof s === 'string' && HEX.test(s);
   const clone = (p) => ({ ...p, colors: { ...p.colors } });
   const valid = (obj) => {
-    if (!obj || typeof obj !== 'object' || !(obj.preset in PRESETS)) return null;
+    if (!obj || typeof obj !== 'object' || typeof obj.preset !== 'string' || !Object.prototype.hasOwnProperty.call(PRESETS, obj.preset)) return null;
     if (obj.custom !== true) return { preset: obj.preset, custom: false, colors: { ...PRESETS[obj.preset].colors } };
     if (!obj.colors || COLOR_KEYS.some((key) => !isHex(obj.colors[key]))) return null;
     return { preset: obj.preset, custom: true, colors: Object.fromEntries(COLOR_KEYS.map((key) => [key, obj.colors[key].toUpperCase()])) };
