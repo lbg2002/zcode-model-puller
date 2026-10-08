@@ -6,15 +6,15 @@ import subprocess
 import sys
 from pathlib import Path
 
-from linux_installer import injected, patch_injector, sha256
+from linux_installer import injected, theme_up_to_date, patch_injector, sha256
 
 
 def build(stage: Path) -> None:
     if os.geteuid() == 0:
         raise RuntimeError('Builder must never run as root')
     source = stage / 'ZCode/resources/app.asar'
-    if not source.is_file() or injected(source):
-        raise RuntimeError('Expected a pristine staged ZCode ASAR')
+    if not source.is_file() or (injected(source) and theme_up_to_date(source)):
+        raise RuntimeError('Expected staged ZCode without theme manager')
     old_digest = sha256(source)
     tools = stage / 'tool'
     tools.mkdir()
@@ -32,16 +32,18 @@ def build(stage: Path) -> None:
         text = text.replace(default, replacement)
     (tools / 'inject_tool.py').write_text(text, encoding='utf-8')
     shutil.copy2(upstream / 'zcode-model-puller.js', tools / 'zcode-model-puller.js')
+    shutil.copy2(upstream / 'zcode-theme-manager.js', tools / 'zcode-theme-manager.js')
     env = dict(os.environ)
     env.update({
         'ZCODE_PATH': str(stage / 'ZCode'),
+        'ZCODE_PULLER_ENABLE_THEME': '1',
         'ZCODE_PULLER_WORK_DIR': str(stage / 'build'),
         'ZCODE_PULLER_TEMP_ASAR': str(stage / 'repacked.asar'),
         'ZCODE_PULLER_SYNTAX_DIR': str(stage / 'syntax'),
         'ZCODE_PULLER_VERIFY_DIR': str(stage / 'verify'),
     })
     subprocess.run([sys.executable, str(tools / 'inject_tool.py')], check=True, env=env)
-    if not injected(source) or sha256(source) == old_digest:
+    if not theme_up_to_date(source) or sha256(source) == old_digest:
         raise RuntimeError('Injection output missing or unchanged')
     print('Verified unprivileged build complete', flush=True)
 
