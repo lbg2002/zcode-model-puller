@@ -41,6 +41,7 @@ test('rejects malformed and CSS-injection values', () => {
   p.colors.accent = 'red; background:url(https://example.com)';
   assert.equal(api.valid(p), null);
   assert.equal(api.valid({ preset: 'evil' }), null);
+  assert.equal(api.valid({ preset: '__proto__' }), null);
 });
 
 test('stored custom theme survives reload and normalizes colors', () => {
