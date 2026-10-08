@@ -69,3 +69,30 @@ jobs:
           assert theme_up_to_date(asar, theme), "theme_up_to_date() rejects a real ASAR built by npm"
           print("Verified embedded theme script matches expected source")
           PY
+      - name: End-to-end staged theme upgrade over an existing model puller ASAR
+        shell: bash
+        run: |
+          set -euo pipefail
+          ASAR_PACKAGE="$(python3 -c 'from linux_installer import active_asar_package; print(active_asar_package()[0])')"
+          TEST_ROOT="$RUNNER_TEMP/zpt-theme-upgrade"
+          mkdir -p "$TEST_ROOT/src/out/main" "$TEST_ROOT/src/out/preload" \
+            "$TEST_ROOT/src/out/renderer" "$TEST_ROOT/stage/ZCode/resources"
+          # Minimal compatible ZCode-like ASAR with the older Model Puller installed.
+          # It exercises the real extract/patch/pack/verify steps; not real ZCode UI.
+          printf 'const ipc = "zcode:puller:read-provider-config";\n' > "$TEST_ROOT/src/out/main/index.js"
+          printf 'const bridge = "readProviderConfigFile";\n' > "$TEST_ROOT/src/out/preload/index.cjs"
+          printf '<html><body><script type="module" src="./zcode-model-puller.js"></script></body></html>\n' > "$TEST_ROOT/src/out/renderer/index.html"
+          cp zcode-model-puller.js "$TEST_ROOT/src/out/renderer/zcode-model-puller.js"
+          printf 'native test fixture\n' > "$TEST_ROOT/src/native.node"
+          npx --yes "$ASAR_PACKAGE" pack "$TEST_ROOT/src" \
+            "$TEST_ROOT/stage/ZCode/resources/app.asar" --unpack '**/*{node,spawn-helper}'
+          python3 auto_builder.py "$TEST_ROOT/stage"
+          python3 - "$TEST_ROOT/stage/ZCode/resources/app.asar" <<'PY'
+          import sys
+          from pathlib import Path
+          from linux_installer import injected, theme_up_to_date
+          asar = Path(sys.argv[1])
+          assert injected(asar), "model puller was lost"
+          assert theme_up_to_date(asar), "theme file is missing or mismatched"
+          print("End-to-end staged upgrade and content fingerprint passed")
+          PY
