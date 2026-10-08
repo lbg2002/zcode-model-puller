@@ -1,177 +1,107 @@
-> **🔁 Ubuntu ZCode 更新后自动重新注入（可选）**：仓库新增 systemd 系统定时器，每约 5 分钟检测官方 `app.asar` 是否被升级覆盖，自动运行低权限构建与完整校验，并仅在通过校验后安装。首次启用在 Ubuntu 上执行 `bash install-auto-linux.sh install`（需要一次 sudo 授权），之后无需手动执行 `install-linux.sh`。使用 `bash install-auto-linux.sh status` / `logs` / `remove` 管理；具体安全约束和恢复步骤见 [Linux 自动维护](LINUX.md)。此功能仅自动处理 ZCode 更新，不会自动拉取 Fork 新代码。\n\n> **🐧 Ubuntu/Linux (.deb) 一键安装**：已适配 `/opt/ZCode/resources/app.asar`。先退出 ZCode，然后在仓库根目录执行 `bash install-linux.sh`；ZCode 通过 apt 更新后重复执行相同命令即可。支持 `bash install-linux.sh status` 查看状态、`bash install-linux.sh restore` 恢复由 Linux 安装器修改的版本。请勿用 `sudo bash install-linux.sh`；脚本只在最终安装经过校验的文件时请求 sudo。详见 [Linux 安装指南](LINUX.md)。
+# ⚡ ZCode Model Puller · Linux / Ubuntu 增强版
 
-# ⚡️ ZCode Model Puller (ZCode 自定义模型自动拉取与同步工具)
+[![CI](https://github.com/lbg2002/zcode-model-puller/actions/workflows/ci.yml/badge.svg)](https://github.com/lbg2002/zcode-model-puller/actions/workflows/ci.yml) ![MIT](https://img.shields.io/badge/License-MIT-blue) ![Linux](https://img.shields.io/badge/Linux-Ubuntu%20.deb-informational)
 
-<p align="center">
-  <b>一键为 ZCode 客户端注入「自动拉取模型」能力，告别繁琐的手动输入！</b>
-  <br />
-  自动探测 API 可用模型 · 智能比对已有模型 · 原生按钮样式 · 白天/夜间主题自适应 · 升级后自动重装 · 0 破坏性风险
-</p>
+> 为 [ZCode](https://zcode.z.ai) 的自定义 OpenAI 兼容供应商添加「⚡ 自动拉取模型」功能：从 API 同步可用模型 ID、比较已有模型，并可选择写入配置。此仓库是 [HHQ-666/zcode-model-puller](https://github.com/HHQ-666/zcode-model-puller) 的第三方 Fork，新增 Linux 安装、版本化备份及 **可选的 systemd 自动维护**；不是 ZCode 官方项目。
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-brightgreen" alt="Platform" />
-  <img src="https://img.shields.io/badge/ZCode-Compatible-blue" alt="ZCode Compatible" />
-  <img src="https://img.shields.io/badge/License-MIT-orange" alt="License" />
-</p>
+**中文文档：** [Linux 完整指南](LINUX.md) · [变更记录](CHANGELOG.md) · [安全说明](SECURITY.md) · [参与贡献](CONTRIBUTING.md)
 
----
+## 功能与适配状态
 
-## 📸 界面效果预览
+| 功能 | 当前状态 |
+| --- | --- |
+| 自定义供应商一键获取 /models 列表 | 来自上游，Ubuntu 用户已实际验证 |
+| Linux `.deb` 一键安装 | 支持 `/opt/ZCode/resources/app.asar`（可用 `--zcode-path` 指定其他目录） |
+| Linux systemd 自动维护 | 可选；约每 5 分钟检查，当前已验证守护启动及已注入跳过 |
+| ZCode 真正升级后的无人值守重新注入 | **尚无实际升级的端到端验证**；如版本结构变化会放弃修改并记录日志 |
+| macOS | 沿用上游 `install.sh` 和 LaunchAgent |
+| Windows / AppImage / Snap / Flatpak | 此 Fork 未提供经过验证的一键安装适配 |
 
-### 1. 深度融入原生界面的按钮与自动刷新列表
-> 在原有「+ 添加模型」右侧新增「**⚡️ 自动拉取模型**」按钮，尺寸/圆角/字号自动对齐官方按钮，与原生界面同族；拉取并保存后，所有模型卡片**秒级自动呈现在列表中**，无需手动刷新！
+自动维护器 **不会**自行更新此 GitHub 仓库代码，也不会自动重启 ZCode。修改了客户端资源后，需要重新启动 ZCode 才能看到效果。
 
-<p align="center">
-  <img src="./assets/model-list-and-button.png" alt="模型列表与并排的原生样式自动拉取按钮" width="80%" />
-</p>
+## 界面预览
 
----
+![模型列表和拉取按钮](assets/model-list-and-button.png)
 
-### 2. 智能比对模型与白天/暗黑主题自适应弹窗
-> 智能区分「已添加」与「未添加」模型，已存在的模型自动识别并取消勾选（防重复添加），未添加的新模型自动全选；完美跟随 ZCode 浅色/深色主题！
+![模型选择弹窗](assets/model-select-modal.png)
 
-<p align="center">
-  <img src="./assets/model-select-modal.png" alt="智能比对与主题自适应弹窗" width="62%" />
-</p>
+## Ubuntu / Debian `.deb` 安装
 
----
-
-## 📖 项目背景
-
-[ZCode](https://zcode.z.ai) 是一款强大的 AI 编程桌面客户端，支持配置自定义模型供应商（如 OpenAI 兼容接口、各大中转站、OneAPI、NewAPI、阿里百炼、DeepSeek、Ollama 等）。
-
-但在使用自定义供应商时，官方界面需要用户**一个一个手动点击「+ 添加模型」并逐字输入模型 ID**。当一个供应商支持几十甚至上百个模型时，手动添加极其费时费力。
-
-本项目为解决这一痛点而生：
-- 既支持在终端中**一键全自动同步**
-- 更支持**无缝将「⚡️ 自动拉取模型」按钮直接注入到 ZCode 软件的设置界面中**！
-
----
-
-## ✨ 核心亮点
-
-- 🎨 **原生级视觉融合**：
-  - 按钮高度、圆角、字号、内边距自动对齐官方「添加模型」按钮，并排收拢显示，不破坏原有排版。
-  - **主题完美自适应**：白天/浅色模式下自动呈现原生干净白底，夜间/深色模式下自适应沉稳暗黑风。
-- 🔍 **智能精准比对**：
-  - 自动识别界面上已展示的模型并标注「**已添加**」（默认不勾选，防重复添加）。
-  - 真正未展示的新模型自动标注「**新模型**」（**默认全选**）。
-  - 提供「全选 / 清空 / 仅选新模型」快捷按钮与实时搜索过滤。
-- ⚡️ **全自动原生刷新**：
-  - 点击「确认添加并保存」后，通过安全的 Electron IPC 原生读写配置，并**自动联动官方刷新事件**，新模型卡片即刻展现在列表中，无需手动刷新或切换页面！
-- 🛡️ **绝对安全稳定**：
-  - 首次注入时自动完整冷备份官方原版 `app.asar`。
-  - 提供一键卸载还原脚本，随时可秒级恢复出厂状态。
-- 🔁 **更新后自动重装**：
-  - 内置更新守护（macOS LaunchAgent），监听 ZCode 应用包变化，**客户端升级后自动重新注入**并弹出系统通知，无需手动重装。
-- 🌐 **免 CORS 跨域限制**：
-  - 完美兼容所有第三方中转平台、代理站与私有模型服务。
-
----
-
-## 🚀 快速开始
-
-### 方式一：克隆仓库并一键安装（推荐）
+前提：已安装 ZCode（默认 `/opt/ZCode/`），系统有 Python 3、Node.js、npx 和 `sudo`；注入器通过 npx 使用 `@electron/asar`，首次使用可能需要网络访问 npm。建议完全退出 ZCode 再安装。
 
 ```bash
-# 1. 克隆本项目
-git clone https://github.com/HHQ-666/zcode-model-puller.git
+git clone https://github.com/lbg2002/zcode-model-puller.git
 cd zcode-model-puller
 
-# 2. 运行一键安装脚本
-./install.sh
+# 无守护的手动安装；不要给整条命令加 sudo
+bash install-linux.sh
+
+# 查看当前注入状态
+bash install-linux.sh status
 ```
 
-> 安装完成后，按 `Command + Q` 完全退出并重新打开 **ZCode** 客户端，进入「设置 -> 模型设置 -> 自定义供应商」，即可看到全新的「**⚡️ 自动拉取模型**」按钮！
->
-> 安装脚本会同时启用更新守护：以后 ZCode 升级时会自动重新注入（弹系统通知提示重启）；若不需要，用 `./install.sh --no-watch`。
+安装器在普通用户的暂存目录构建并验证 ASAR，备份当前原版资源，最后才使用 sudo 发布校验产物。已注入的版本会直接跳过。ZCode 更新覆盖注入时，可再次运行 `bash install-linux.sh`。
 
----
+## 可选：开机启动的自动维护
 
-### 方式二：命令行独立使用（无需修改任何软件）
-
-如果你不想注入任何客户端界面代码，也可以直接使用内置的 CLI 工具：
+这是 **持久 systemd 系统服务**，初次安装时需要明确授权 sudo。它检测到 ZCode 的 ASAR 已恢复为未注入状态，会尝试以独立、低权限的 `zcode-puller` 账号重新构建和验证，再由系统服务部署。启用前请阅读 [安全注意事项](SECURITY.md) 与 [实现细节](LINUX.md)。
 
 ```bash
-cd zcode-model-puller
+# 安装定时器（一次性操作）
+bash install-auto-linux.sh install
+
+# 检查状态和日志
+bash install-auto-linux.sh status
+bash install-auto-linux.sh logs
+
+# 停用自动维护（不会移除当前按钮）
+bash install-auto-linux.sh remove
+```
+
+维护器仅修复被客户端更新覆盖的注入。**不会自动 git pull、不会对已注入客户端强制升级插件，也不会为不兼容的新版本跳过检查。** 修改本仓库自动维护源码后，需要重新执行 `bash install-auto-linux.sh install`，以更新 root 所持有的服务代码快照。
+
+## 只同步模型，不修改 ZCode 程序
+
+```bash
 python3 run.py --sync
 ```
-终端将自动列出所有在 ZCode 中配置的自定义供应商，选择编号即可一键批量拉取并同步写入配置！
 
----
+该模式直接修改用户的 `~/.zcode/v2/provider_config.json`（会创建配置备份），并要求当前供应商提供可访问的模型列表接口。注意保护配置文件和 API Key，不要把真实密钥贴在 Issue 中。
 
-## 🔄 一键卸载与还原
+## 恢复 / 卸载
 
-如果你想随时卸载注入，完全恢复 ZCode 官方原版：
+请先完全退出 ZCode。**手动安装与 systemd 安装使用不同的备份与状态记录，不可混用恢复命令：**
 
 ```bash
-cd zcode-model-puller
+# 仅恢复由 Linux 手动安装器本身安装的版本
+bash install-linux.sh restore
+
+# 仅恢复由 Linux systemd 自动维护器安装的版本（同时停用定时器）
+bash install-auto-linux.sh restore
+
+# macOS 使用上游卸载入口
 ./uninstall.sh
 ```
 
----
+如果你以前手工修改过 `app.asar`，上述恢复命令可能会出于版本保护而拒绝操作；应使用当时保存的原版资源。不要用旧版备份覆盖较新 ZCode。参见 [LINUX.md](LINUX.md)。
 
-## 📂 项目结构
-
-```text
-zcode-model-puller/
-├── assets/                # 效果预览截图
-├── run.py                 # 总控制台入口
-├── zcode_sync.py          # 核心模型探测与 CLI 同步引擎
-├── inject_tool.py         # 客户端打包、安全注入与还原引擎
-├── zcode-model-puller.js  # 注入到 ZCode 前端的 UI 与交互脚本
-├── watch_reinstall.py     # 更新守护：检测到 ZCode 升级后自动重新注入
-├── watch_agent.py         # 守护的 launchd 安装 / 卸载 / 状态查看
-├── install.sh             # 一键安装脚本
-├── uninstall.sh           # 一键卸载与还原脚本
-├── LICENSE                # MIT 开源协议
-└── README.md              # 项目详细说明文档
-```
-
----
-
-## 🛠️ 技术原理
-
-1. **资源解构与打包**：使用 `@electron/asar` 解包与重构 ZCode 客户端应用包；
-2. **进程间通信（IPC）桥梁**：在 Electron 主进程（Main Process）与预加载脚本（Preload Script）中注册原生安全通道，绕过 Chromium 浏览器的跨域拦截与沙箱权限限制；
-3. **前端 DOM 监听与注入**：使用 `MutationObserver` 监听设置页面的 DOM 节点挂载，在原有「添加模型」按钮旁动态插入「自动拉取模型」组件；
-4. **状态同步与事件联动**：通过模拟官方主刷新按钮的点击事件，促使 React 内部状态树重新载入最新的配置文件，达到无需重启软件、列表秒级重绘的流畅效果。
-
----
-
-##  常见问题
-
-**Q：ZCode 升级之后，界面上的「⚡️ 自动拉取模型」按钮消失了？**
-
-ZCode 每次自动更新都会**整包替换** `app.asar`（连同旧的 `.original.bak` 备份一起清掉），因此注入会失效。
-
-安装时已默认启用**更新守护**：检测到客户端升级后会**自动重新注入**并弹出系统通知，你只需重启一次 ZCode 即可。若需手动处理（或未启用守护），重新执行一次安装即可，无需卸载：
+## 开发与测试
 
 ```bash
-cd zcode-model-puller
-./install.sh          # 重新注入；随后 Command + Q 完全退出再启动
+python3 -m unittest discover -s tests -v
+python3 -m py_compile linux_installer.py auto_maintain.py auto_builder.py
+bash -n install-linux.sh install-auto-linux.sh
 ```
 
-> 该安装流程是幂等的，且会在替换前做完整校验（语法校验 + 归档结构校验 + 原生模块解包校验），校验不通过则放弃替换，不会破坏原包。
-> 注入器已适配 ZCode 3.12+：供应商配置改从 `~/.zcode/v2/provider_config.json` 读写，注入锚点自动识别，不再因官方压缩变量名变化而失效。
+自动测试涵盖 ASAR 格式识别、备份、安装、失败回滚、重复注入跳过、异常重试节流等，**不等同于完整的 ZCode 版本兼容验证**。欢迎使用 [Issues](https://github.com/lbg2002/zcode-model-puller/issues) 反馈版本、系统信息和已脱敏日志。
 
-**Q：如何查看或停用更新守护？**
+## 来源、声明与协议
 
-```bash
-cd zcode-model-puller
-python3 watch_agent.py status    # 查看是否已加载
-python3 watch_agent.py remove    # 停用并移除守护（不影响已注入的按钮）
-```
-
-> 守护日志：`~/.zcode-model-puller/watch.log`；状态与指纹：`~/.zcode-model-puller/state.json`。
-> 安装时加 `--no-watch` 可只注入、不启用守护；手动运行 `install.sh` 与守护互斥，不会重复打包。
-
-**Q：ZCode 3.11 时代写在 `~/.zcode/v2/config.json` 里的供应商配置还有效吗？**
-
-3.12 起自定义供应商统一存放于 `~/.zcode/v2/provider_config.json`，旧文件已不再被客户端读取。本项目（含界面按钮与 CLI 同步）已全部切换到新配置，无需手动迁移。
+- **上游项目及原作者**：[HHQ-666/zcode-model-puller](https://github.com/HHQ-666/zcode-model-puller) · HHQ；界面注入、模型同步和 macOS 功能保留上游实现。
+- **此 Fork**：`lbg2002` 维护的 Ubuntu/Linux 扩展与自动维护实现。
+- **开源许可**：[MIT](LICENSE)，保留上游 copyright。
+- **免责声明**：修改第三方客户端的 Electron ASAR 可能被官方更新覆盖，也可能产生兼容性或运行风险；在你有权限管理的设备上使用，先做好备份。该项目与 ZCode 官方无隶属或认可关系。
 
 ---
 
-## 📄 开源协议
-
-本项目采用 [MIT License](LICENSE) 开源协议，欢迎 Star、Fork 与提交 Pull Request！
+**English quick start:** On Ubuntu `.deb` installs, run `bash install-linux.sh` for staged installation or opt in to a privileged systemd timer with `bash install-auto-linux.sh install`. See [LINUX.md](LINUX.md) for caveats, restoration, and unattended maintenance. macOS users should follow the original upstream `./install.sh` path.
