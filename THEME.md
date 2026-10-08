@@ -1,4 +1,4 @@
-# ZCode Linux 主题管理器 / Theme Manager
+# ZCode Enhancer · Linux 主题管理器 / Theme Manager
 
 这是 `lbg2002/zcode-model-puller` Fork 的实验性 Linux 主题扩展，与原来的「自动拉取模型」按钮并存。它不是 ZCode 官方主题插件，也不依赖 VS Code 扩展市场。
 
@@ -8,7 +8,7 @@
 - 七项可调整色彩：主背景、侧栏、面板、卡片、正文、强调色、边框。输入立即预览，点击**应用主题**才持久化。
 - **取消 / Escape / 点击遮罩**：放弃本次试色，回到之前已保存的样式。
 - **恢复官方默认**：删除仅由此扩展保存的 `zcode-puller-theme-v1` 配置，恢复 ZCode 原有的官方外观选择；不会修改 API Key 或自定义模型配置。
-- 固定的「主题」悬浮入口，无需进入特定设置页面；界面有键盘焦点、对话框和窄屏适配。
+- 入口已移入 ZCode **设置 → 外观（Appearance）→ 自定义主题 → 管理主题**；不再显示右下角常驻悬浮按钮。设置页仍使用独立弹窗完成详细编辑，并保留键盘焦点、对话框和窄屏适配。
 - 不引入外部 CSS / CDN / 字体，不发送任何网络请求。
 
 > 主题通过覆盖 Electron 前端的语义 CSS 变量工作，**不能保证覆盖 ZCode 每个组件**。官方深浅主题的条件渲染仍由 ZCode 自己控制：使用 Solarized Light 或 Paper 时，建议先将 ZCode 官方外观切换为浅色，深色预设则搭配官方深色。主题保存通过 ZCode 渲染进程中的 localStorage 实现，重新启动后重新应用；不同 Web/桌面数据分区不会自动同步。
@@ -33,7 +33,7 @@ bash install-auto-linux.sh logs
 bash install-linux.sh status
 ```
 
-重新打开 ZCode，窗口**右下角**会出现「主题」按钮。打开后选预设或微调配色，确认「应用主题」。原有「⚡ 自动拉取模型」按钮不会消失。
+重新打开 ZCode，进入 **设置 → 外观（Appearance）**，在原有「界面主题」和「字体大小」的下方找到「自定义主题」，点击「管理主题」选预设或微调配色并应用。右下角不再显示主题悬浮按钮；原有「⚡ 自动拉取模型」按钮不会消失。
 
 守护安装程序会以低权限 `zcode-puller` 账户构建；仅校验通过后才发布 `app.asar`，**不会**从 GitHub 后台下载或执行新的代码。检测到 ZCode 进程仍在运行时，会等应用退出后再处理更新；必要时完全退出 ZCode，等约 5 分钟或手动执行一次检查。
 
@@ -69,7 +69,7 @@ journalctl -u zcode-model-puller-auto.service -n 80 --no-pager
 
 | 现象 | 可能原因与处理 |
 | --- | --- |
-| 没有「主题」按钮 | 核对状态是否 `Theme manager: current`、完全退出并重开 ZCode；查看日志是否通过 ASAR 语法与内容校验。 |
+| 设置 → 外观下没有「自定义主题」 | 核对状态是否 `Theme manager: current`、完全退出并重开 ZCode；确认进入的是 ZCode 的设置「外观」页而不是编辑器主题设置；查看日志是否通过 ASAR 语法与内容校验。该入口依赖官方设置页的 `data-active-section="appearance"` 容器，未来上游改版可能需要重新适配。 |
 | 日志提示 `ZCode is running` | 守护为了保护本机应用推迟安装；退出 ZCode 后等待下次检查。 |
 | 日志提示 `[Errno 2] No such file or directory: 'runuser'` | 旧自动维护器对 `/usr/sbin/runuser` 使用了错误的 PATH；更新仓库并重新执行 `bash install-auto-linux.sh install`，此操作也会清除旧版本构建失败后的重试节流记录，再 `sudo systemctl start zcode-model-puller-auto.service` 验证。 |
 | `npm WARN EBADENGINE` / `Unexpected token 'with'`，发现 Node 18 | 新版 `@electron/asar` 4.x 要求 Node ≥22.12。当前 Linux 安装器会根据独立系统账号实际使用的 Node 自动选择固定版本：Node 18 使用 `@electron/asar@3.4.1`，Node ≥22.12 使用 `@electron/asar@4.3.1`；不必为此全局升级 Node 或开放私人 nvm 目录。更新仓库后重新运行 `bash install-auto-linux.sh install`，再关闭 ZCode 触发服务检查。 |
