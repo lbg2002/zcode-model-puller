@@ -17,7 +17,7 @@ function fixture(store = {}, documentOverrides = {}) {
   const storage = new Map(Object.entries(store));
   const ctx = {
     window: { __ZPT_TEST_MODE__: true },
-    document: { documentElement: root, ...documentOverrides },
+    document: { documentElement: root, getElementById: () => null, ...documentOverrides },
     localStorage: { getItem: (k) => storage.has(k) ? storage.get(k) : null,
       setItem: (k,v) => storage.set(k,v), removeItem: (k) => storage.delete(k) },
     console,
