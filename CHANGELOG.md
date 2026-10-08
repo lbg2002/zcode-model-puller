@@ -2,6 +2,14 @@
 
 All notable changes for this downstream fork are documented here. The fork preserves the upstream MIT license and credits its author.
 
+## Unreleased — theme manager for Linux
+- Added renderer-only `zcode-theme-manager.js` with 6 palettes, seven color controls, live preview, apply/cancel, and restore-official actions.
+- Integrated the theme asset into the verified ASAR injection path without changing the original macOS default installation.
+- Added exact archived theme-script fingerprint detection so existing model-only injections and updated theme code can be staged and upgraded safely.
+- Extended the systemd snapshot to include theme asset, defer resource replacement while ZCode is running, and retain precise pre-upgrade backups.
+- Added `THEME.md` plus 7 JavaScript behavior tests and new Python version/upgrade/rollback tests.
+- **Unverified:** a real GUI run of the theme manager on Linux or an actual post-update theme re-injection; users should test on their local installed ZCode before treating the feature as stable.
+
 ## Unreleased — public documentation and CI
 - Reorganized README for Ubuntu/Linux and macOS, with clear platform limitations.
 - Added security, contribution, issue-reporting, and automated-test guidance.
