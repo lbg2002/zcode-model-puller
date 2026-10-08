@@ -88,6 +88,7 @@ test('preset colors are copied, not mutated globally', () => {
 });
 
 test('settings entry is shown only inside ZCode Appearance settings', () => {
+  assert.doesNotMatch(SOURCE, /#zpt-launcher|id=['\"]zpt-launcher/);
   const card = {
     rows: [],
     querySelector(selector) {
@@ -128,6 +129,9 @@ test('settings entry is shown only inside ZCode Appearance settings', () => {
   assert.equal(summary.textContent, '当前：跟随 ZCode 官方主题');
   api.mountSettingsEntry();
   assert.equal(created, 1, 'do not duplicate the row on React updates');
+  card.rows = []; // Simulate React replacing the Appearance card content.
+  api.mountSettingsEntry();
+  assert.equal(created, 2, 'reattach after a React remount');
   assert.equal(api.persist(api.makePreset('nord')), true);
 });
 
