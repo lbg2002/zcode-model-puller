@@ -68,6 +68,7 @@ journalctl -u zcode-model-puller-auto.service -n 80 --no-pager
 | --- | --- |
 | 没有「主题」按钮 | 核对状态是否 `Theme manager: current`、完全退出并重开 ZCode；查看日志是否通过 ASAR 语法与内容校验。 |
 | 日志提示 `ZCode is running` | 守护为了保护本机应用推迟安装；退出 ZCode 后等待下次检查。 |
+| 日志提示 `[Errno 2] No such file or directory: 'runuser'` | 旧自动维护器对 `/usr/sbin/runuser` 使用了错误的 PATH；更新仓库并重新执行 `bash install-auto-linux.sh install`，此操作也会清除旧版本构建失败后的重试节流记录，再 `sudo systemctl start zcode-model-puller-auto.service` 验证。 |
 | 主题颜色不完整 | 有些界面不是通过当前 CSS 变量绘制；浅色预设尽量搭配 ZCode 官方浅色主题。 |
 | 重新启动后恢复了默认 | 检查 Electron 渲染进程是否允许使用 localStorage，或者在多个 ZCode 数据分区之间切换。 |
 | 注入时语法/兼容校验失败 | 官方升级改变了界面/ASAR 结构；原包不会因该次校验失败而替换，可提交脱敏日志。 |
