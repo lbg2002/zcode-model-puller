@@ -124,9 +124,21 @@ def theme_up_to_date(asar: Path, expected: Path | None = None) -> bool:
         if size < 1 or size > 4 * 1024 * 1024 or offset < 0:
             return False
         with asar.open("rb") as stream:
-            stream.seek(8)
-            header_size = int.from_bytes(stream.read(4), "little")
-            stream.seek(16 + header_size + offset)
+            # ASAR uses two Chromium Pickles: an 8-byte size Pickle, then
+            # header_size bytes of header Pickle. File offsets begin AFTER
+            # both Pickles, not at 16 + the header Pickle's payload length.
+            # The previous formula was four bytes too far into the archive.
+            size_pickle = stream.read(8)
+            if len(size_pickle) != 8 or int.from_bytes(size_pickle[:4], "little") != 4:
+                return False
+            header_size = int.from_bytes(size_pickle[4:8], "little")
+            if header_size < 8 or header_size > 64 * 1024 * 1024:
+                return False
+            file_start = 8 + header_size + offset
+            stream.seek(0, os.SEEK_END)
+            if file_start + size > stream.tell():
+                return False
+            stream.seek(file_start)
             bundled = stream.read(size)
         return len(bundled) == size and hashlib.sha256(bundled).digest() == bytes.fromhex(sha256(expected))
     except (OSError, ValueError, TypeError, KeyError, OverflowError):
