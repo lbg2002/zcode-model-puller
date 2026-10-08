@@ -111,6 +111,39 @@ class WatcherTests(unittest.TestCase):
         self.assertTrue(value['PATH'].startswith('/home/test/.nvm/bin:'))
         self.assertEqual(value['HOME'], str(self.root))
 
+    def test_runuser_is_resolved_outside_worker_path(self):
+        # Regression: on Ubuntu runuser lives in /usr/sbin, but the intentionally
+        # restricted build environment does not have /usr/sbin in PATH.
+        restricted = auto.worker_env(self.root)
+        self.assertNotIn('/usr/sbin', restricted['PATH'].split(':'))
+        with patch.object(auto.shutil, 'which', return_value='/usr/sbin/runuser') as which:
+            self.assertEqual(auto.resolve_runuser(), '/usr/sbin/runuser')
+            which.assert_called_once_with('runuser', path='/usr/sbin:/sbin:/usr/bin:/bin')
+
+    def test_runuser_missing_has_actionable_error(self):
+        with patch.object(auto.shutil, 'which', return_value=None):
+            with self.assertRaisesRegex(RuntimeError, 'Missing runuser'):
+                auto.resolve_runuser()
+
+    def test_builder_uses_absolute_runuser_with_restricted_path(self):
+        from types import SimpleNamespace
+
+        store = self.root / 'state'
+        store.mkdir()
+        original_hash = auto.digest(self.source)
+        with patch.object(auto, 'STATE_ROOT', store), \
+             patch.object(auto, 'LIB', self.root / 'lib'), \
+             patch.object(auto, 'backup_pristine'), \
+             patch.object(auto, 'publish_built'), \
+             patch.object(auto.os, 'chown'), \
+             patch.object(auto.pwd, 'getpwnam', return_value=SimpleNamespace(pw_uid=42, pw_gid=42)), \
+             patch.object(auto, 'resolve_runuser', return_value='/usr/sbin/runuser'), \
+             patch.object(auto, 'execute') as execute:
+            auto._run_build_and_publish(self.root / 'resources', self.source, original_hash, {})
+            call = execute.call_args
+            self.assertEqual(call.args[0][0], '/usr/sbin/runuser')
+            self.assertNotIn('/usr/sbin', call.kwargs['env']['PATH'])
+
     def test_builder_never_runs_as_root(self):
         import sys
         sys.path.insert(0, str(ROOT))
