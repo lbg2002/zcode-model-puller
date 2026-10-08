@@ -48,6 +48,9 @@ bash install-linux.sh status
 
 如果发现的是先前已注入模型插件但没有主题管理器的 ASAR，会保存当前完整资源作为**升级前快照**，重新在普通用户的暂存目录打包、验证，并只在最后使用 sudo 替换文件。主题脚本是否已更新由 ASAR 中的实际脚本 SHA-256 与仓库源文件比较，后续主题代码变化也能检测。
 
+
+**Node / npm 兼容性：** 当前版会使用 systemd 构建账号*实际能够运行*的 Node，而不是只相信用户终端里的 `node --version`。因为私有 nvm 安装可能对 `zcode-puller` 不可访问，即使配置了 nvm 的 PATH，实际 Node 仍可能是系统的 v18。构建器会显示 `Node runtime in worker: ...; ASAR CLI: ...`。本项目在 CI 中分别以 Node 18 + ASAR 3.4.1 和 Node 24 + ASAR 4.3.1 做打包/解包烟雾测试；但仍需在真实 ZCode 上验证整包重注入。
+
 ## 预期行为及恢复
 
 - **恢复官方主题（推荐）**：主题管理器内点击「恢复官方默认」。仅移除 CSS 覆盖和本地主题偏好，不影响模型拉取功能，也无需修改 ASAR。
@@ -69,6 +72,7 @@ journalctl -u zcode-model-puller-auto.service -n 80 --no-pager
 | 没有「主题」按钮 | 核对状态是否 `Theme manager: current`、完全退出并重开 ZCode；查看日志是否通过 ASAR 语法与内容校验。 |
 | 日志提示 `ZCode is running` | 守护为了保护本机应用推迟安装；退出 ZCode 后等待下次检查。 |
 | 日志提示 `[Errno 2] No such file or directory: 'runuser'` | 旧自动维护器对 `/usr/sbin/runuser` 使用了错误的 PATH；更新仓库并重新执行 `bash install-auto-linux.sh install`，此操作也会清除旧版本构建失败后的重试节流记录，再 `sudo systemctl start zcode-model-puller-auto.service` 验证。 |
+| `npm WARN EBADENGINE` / `Unexpected token 'with'`，发现 Node 18 | 新版 `@electron/asar` 4.x 要求 Node ≥22.12。当前 Linux 安装器会根据独立系统账号实际使用的 Node 自动选择固定版本：Node 18 使用 `@electron/asar@3.4.1`，Node ≥22.12 使用 `@electron/asar@4.3.1`；不必为此全局升级 Node 或开放私人 nvm 目录。更新仓库后重新运行 `bash install-auto-linux.sh install`，再关闭 ZCode 触发服务检查。 |
 | 主题颜色不完整 | 有些界面不是通过当前 CSS 变量绘制；浅色预设尽量搭配 ZCode 官方浅色主题。 |
 | 重新启动后恢复了默认 | 检查 Electron 渲染进程是否允许使用 localStorage，或者在多个 ZCode 数据分区之间切换。 |
 | 注入时语法/兼容校验失败 | 官方升级改变了界面/ASAR 结构；原包不会因该次校验失败而替换，可提交脱敏日志。 |
