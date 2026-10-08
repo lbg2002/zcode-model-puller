@@ -1,0 +1,29 @@
+name: Linux checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-and-syntax:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Python syntax
+        run: python -m py_compile linux_installer.py auto_maintain.py auto_builder.py
+      - name: Bash syntax
+        run: bash -n install-linux.sh install-auto-linux.sh install.sh uninstall.sh
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
