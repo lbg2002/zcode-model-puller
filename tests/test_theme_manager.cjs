@@ -204,8 +204,9 @@ test('scoped sidebar matching follows a full-height left column without matching
   });
   const left = makeNode(0, 286, 900);
   const main = makeNode(286, 1100, 900);
+  let candidates = [main, left];
   const doc = {
-    querySelectorAll: () => [main, left],
+    querySelectorAll: () => candidates,
     getElementById: () => null,
   };
   const api = fixture({}, doc);
@@ -213,7 +214,7 @@ test('scoped sidebar matching follows a full-height left column without matching
   assert.equal(left.attributes['data-zpt-shell-sidebar'], 'true');
   assert.equal(main.attributes['data-zpt-shell-sidebar'], undefined);
   const next = makeNode(0, 310, 900);
-  doc.querySelectorAll = () => [next];
+  candidates = [next];
   api.mountShellTheme();
   assert.equal(left.attributes['data-zpt-shell-sidebar'], undefined);
   assert.equal(next.attributes['data-zpt-shell-sidebar'], 'true');
