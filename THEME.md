@@ -4,14 +4,17 @@
 
 ## 功能
 
-- 六套内置配色：Tokyo Night、Catppuccin Mocha、GitHub Dimmed、Nord、Solarized Light、Paper。
-- 七项可调整色彩：主背景、侧栏、面板、卡片、正文、强调色、边框。输入立即预览，点击**应用主题**才持久化。
+- 九套内置配色：Tokyo Night、Catppuccin Mocha、GitHub Dimmed、Nord、Solarized Light、Paper、墨韵寒香（暗色）、青花瓷影（浅色）、千里江山（暖色暗黑）。
+- 十三项可调整色彩：主背景、侧栏、面板、卡片、正文、强调色、边框，以及关键字、函数名、字符串、注释、文本选区、光标。旧版仅保存七项颜色的自定义方案可无损读取，新字段自动采用相应预设默认值。输入立即预览，点击**应用主题**才持久化。
 - **取消 / Escape / 点击遮罩**：放弃本次试色，回到之前已保存的样式。
 - **恢复官方默认**：删除仅由此扩展保存的 `zcode-puller-theme-v1` 配置，恢复 ZCode 原有的官方外观选择；不会修改 API Key 或自定义模型配置。
 - 入口已移入 ZCode **设置 → 外观（Appearance）→ 自定义主题 → 管理主题**；不再显示右下角常驻悬浮按钮。设置页仍使用独立弹窗完成详细编辑，并保留键盘焦点、对话框和窄屏适配。
-- 不引入外部 CSS / CDN / 字体，不发送任何网络请求。
+- 独立处理左侧主导航、项目 / 任务列表及 hover / selected：优先复用语义 CSS 变量，对以固定 Tailwind 背景类实现的左侧栏增加受限区域覆盖；React 路由切换后重新定位左侧区域，不覆盖右侧工作区。
+- 语法色适配支持高亮器常用的 Highlight.js、Prism、CodeMirror 类名；ZCode 自己的 Monaco / 自定义渲染器不保证能通过 CSS 修改语法色，避免强行改写未识别的内联样式。
+- UI 可优先使用本机已有的思源黑体 / Noto Sans CJK SC，代码使用 JetBrains Mono / Fira Code（均有系统后备字体）；不下载字体，不更换 ZCode 官方图标素材。
+- 不引入外部 CSS / CDN / 字体，不发送任何网络请求.
 
-> 主题通过覆盖 Electron 前端的语义 CSS 变量工作，**不能保证覆盖 ZCode 每个组件**。官方深浅主题的条件渲染仍由 ZCode 自己控制：使用 Solarized Light 或 Paper 时，建议先将 ZCode 官方外观切换为浅色，深色预设则搭配官方深色。主题保存通过 ZCode 渲染进程中的 localStorage 实现，重新启动后重新应用；不同 Web/桌面数据分区不会自动同步。
+> 主题通过覆盖 Electron 前端的语义 CSS 变量工作，**不能保证覆盖 ZCode 每个组件**。官方深浅主题的条件渲染仍由 ZCode 自己控制：使用 Solarized Light、Paper 或青花瓷影时，建议先将 ZCode 官方外观切换为浅色，深色预设则搭配官方深色。主题保存通过 ZCode 渲染进程中的 localStorage 实现，重新启动后重新应用；不同 Web/桌面数据分区不会自动同步。
 
 ## 从旧版 Model Puller 升级（你的情形）
 
@@ -51,6 +54,13 @@ bash install-linux.sh status
 
 **Node / npm 兼容性：** 当前版会使用 systemd 构建账号*实际能够运行*的 Node，而不是只相信用户终端里的 `node --version`。因为私有 nvm 安装可能对 `zcode-puller` 不可访问，即使配置了 nvm 的 PATH，实际 Node 仍可能是系统的 v18。构建器会显示 `Node runtime in worker: ...; ASAR CLI: ...`。本项目在 CI 中分别以 Node 18 + ASAR 3.4.1 和 Node 24 + ASAR 4.3.1 做打包/解包烟雾测试；但仍需在真实 ZCode 上验证整包重注入。
 
+## 主题变更 v1.2.0
+
+- 新国风三套颜色（背景 / 侧栏 / 前景 / 关键字 / 函数 / 字符串 / 注释 / 选中 / 光标）按原定 HEX 值写入。
+- 旧六套主题保持原有七色值，补齐代码语法、选区和光标变量。
+- 主视区 / 左侧栏使用局部 CSS 覆盖，设置弹窗也跟随当前深浅配色；不读写官方外观存储。
+- 增加边界检测（仅桌面左侧、限定宽度与高度）防止误染主内容区。由于无法在所有 ZCode 客户端中进行真实 UI 验证，首次升级请人工检查侧栏展开、搜索、任务 hover、对话、代码块及恢复默认。
+
 ## 预期行为及恢复
 
 - **恢复官方主题（推荐）**：主题管理器内点击「恢复官方默认」。仅移除 CSS 覆盖和本地主题偏好，不影响模型拉取功能，也无需修改 ASAR。
@@ -74,7 +84,7 @@ journalctl -u zcode-model-puller-auto.service -n 80 --no-pager
 | 日志提示 `[Errno 2] No such file or directory: 'runuser'` | 旧自动维护器对 `/usr/sbin/runuser` 使用了错误的 PATH；更新仓库并重新执行 `bash install-auto-linux.sh install`，此操作也会清除旧版本构建失败后的重试节流记录，再 `sudo systemctl start zcode-model-puller-auto.service` 验证。 |
 | `npm WARN EBADENGINE` / `Unexpected token 'with'`，发现 Node 18 | 新版 `@electron/asar` 4.x 要求 Node ≥22.12。当前 Linux 安装器会根据独立系统账号实际使用的 Node 自动选择固定版本：Node 18 使用 `@electron/asar@3.4.1`，Node ≥22.12 使用 `@electron/asar@4.3.1`；不必为此全局升级 Node 或开放私人 nvm 目录。更新仓库后重新运行 `bash install-auto-linux.sh install`，再关闭 ZCode 触发服务检查。 |
 | 注入脚本输出「🎉 注入成功」，但外层提示 `Injection output missing or unchanged` | 旧版 ASAR 指纹检测的文件偏移多算了 4 字节，导致内容校验误报。更新到包含修复的 Fork 源码，重新执行 `bash install-auto-linux.sh install` 部署 root-owned 服务快照，然后关闭 ZCode 并触发检查。修复已覆盖 Node 18/24 的真实 ASAR 文件与完整暂存升级 CI 测试。 |
-| 主题颜色不完整 | 有些界面不是通过当前 CSS 变量绘制；浅色预设尽量搭配 ZCode 官方浅色主题。 |
+| 主题颜色不完整 | 现在会尝试识别并覆盖左侧全高导航 / 任务列表，但不同 ZCode 版本的结构和内联样式仍可能不兼容。确认完全重启 ZCode、进入对应深浅模式，提供脱敏截图和 DOM 类名以继续适配。 |
 | 重新启动后恢复了默认 | 检查 Electron 渲染进程是否允许使用 localStorage，或者在多个 ZCode 数据分区之间切换。 |
 | 注入时语法/兼容校验失败 | 官方升级改变了界面/ASAR 结构；原包不会因该次校验失败而替换，可提交脱敏日志。 |
 | 自动维护没有采用新源代码 | 执行 `bash install-auto-linux.sh install` 更新 `/usr/local/lib/zcode-model-puller-auto/` 的 root-owned 快照。 |

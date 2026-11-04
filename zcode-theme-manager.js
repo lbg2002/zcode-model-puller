@@ -6,17 +6,193 @@
 (() => {
   'use strict';
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
-  const VERSION = '1.1.0';
+  const VERSION = '1.2.0';
   const STORAGE_KEY = 'zcode-puller-theme-v1';
-  const COLOR_KEYS = ['background', 'sidebar', 'panel', 'card', 'foreground', 'accent', 'border'];
-  const LABELS = { background: '主背景', sidebar: '侧边栏', panel: '面板 / 顶栏', card: '卡片', foreground: '正文文字', accent: '强调颜色', border: '边框' };
+  const LEGACY_COLOR_KEYS = ['background', 'sidebar', 'panel', 'card', 'foreground', 'accent', 'border'];
+  const EXTRA_COLOR_KEYS = ['keyword', 'function', 'string', 'comment', 'selection', 'cursor'];
+  const COLOR_KEYS = [...LEGACY_COLOR_KEYS, ...EXTRA_COLOR_KEYS];
+  const LABELS = { background: '主背景', sidebar: '侧边栏', panel: '面板 / 顶栏', card: '卡片', foreground: '正文文字', accent: '强调颜色', border: '边框', keyword: '语法 · 关键字', function: '语法 · 函数名', string: '语法 · 字符串', comment: '语法 · 注释', selection: '选中背景', cursor: '输入光标' };
   const PRESETS = Object.freeze({
-    'tokyo-night': { name: 'Tokyo Night', desc: '深蓝沉静，适合长时间编程', mode: 'dark', colors: { background: '#1A1B26', sidebar: '#16161E', panel: '#24283B', card: '#292E42', foreground: '#C0CAF5', accent: '#7AA2F7', border: '#414868' } },
-    'catppuccin-mocha': { name: 'Catppuccin Mocha', desc: '柔和紫灰，层次轻盈', mode: 'dark', colors: { background: '#1E1E2E', sidebar: '#181825', panel: '#313244', card: '#313244', foreground: '#CDD6F4', accent: '#CBA6F7', border: '#45475A' } },
-    'github-dimmed': { name: 'GitHub Dimmed', desc: '柔和石板灰，阅读舒适', mode: 'dark', colors: { background: '#22272E', sidebar: '#1C2128', panel: '#2D333B', card: '#2D333B', foreground: '#ADBAC7', accent: '#539BF5', border: '#444C56' } },
-    'nord': { name: 'Nord', desc: '北欧冷色，清晰克制', mode: 'dark', colors: { background: '#2E3440', sidebar: '#242933', panel: '#3B4252', card: '#434C5E', foreground: '#ECEFF4', accent: '#88C0D0', border: '#4C566A' } },
-    'solarized-light': { name: 'Solarized Light', desc: '温润米白，适合日间使用', mode: 'light', colors: { background: '#FDF6E3', sidebar: '#EEE8D5', panel: '#F5EFD9', card: '#FFFBED', foreground: '#586E75', accent: '#268BD2', border: '#D8CFB9' } },
-    'paper': { name: 'Paper', desc: '中性纸白，排版干净', mode: 'light', colors: { background: '#F7F8FA', sidebar: '#EBEEF3', panel: '#FFFFFF', card: '#FFFFFF', foreground: '#273244', accent: '#4361EE', border: '#D8DEE9' } },
+    "tokyo-night": {
+      "name": "Tokyo Night",
+      "desc": "深蓝沉静，适合长时间编程",
+      "mode": "dark",
+      "colors": {
+        "background": "#1A1B26",
+        "sidebar": "#16161E",
+        "panel": "#24283B",
+        "card": "#292E42",
+        "foreground": "#C0CAF5",
+        "accent": "#7AA2F7",
+        "border": "#414868",
+        "keyword": "#BB9AF7",
+        "function": "#7AA2F7",
+        "string": "#9ECE6A",
+        "comment": "#737AA2",
+        "selection": "#364A70",
+        "cursor": "#C0CAF5"
+      }
+    },
+    "catppuccin-mocha": {
+      "name": "Catppuccin Mocha",
+      "desc": "柔和紫灰，层次轻盈",
+      "mode": "dark",
+      "colors": {
+        "background": "#1E1E2E",
+        "sidebar": "#181825",
+        "panel": "#313244",
+        "card": "#313244",
+        "foreground": "#CDD6F4",
+        "accent": "#CBA6F7",
+        "border": "#45475A",
+        "keyword": "#CBA6F7",
+        "function": "#89B4FA",
+        "string": "#A6E3A1",
+        "comment": "#9399B2",
+        "selection": "#45475A",
+        "cursor": "#F5E0DC"
+      }
+    },
+    "github-dimmed": {
+      "name": "GitHub Dimmed",
+      "desc": "柔和石板灰，阅读舒适",
+      "mode": "dark",
+      "colors": {
+        "background": "#22272E",
+        "sidebar": "#1C2128",
+        "panel": "#2D333B",
+        "card": "#2D333B",
+        "foreground": "#ADBAC7",
+        "accent": "#539BF5",
+        "border": "#444C56",
+        "keyword": "#F47067",
+        "function": "#6CB6FF",
+        "string": "#96D0FF",
+        "comment": "#768390",
+        "selection": "#373E47",
+        "cursor": "#ADBAC7"
+      }
+    },
+    "nord": {
+      "name": "Nord",
+      "desc": "北欧冷色，清晰克制",
+      "mode": "dark",
+      "colors": {
+        "background": "#2E3440",
+        "sidebar": "#242933",
+        "panel": "#3B4252",
+        "card": "#434C5E",
+        "foreground": "#ECEFF4",
+        "accent": "#88C0D0",
+        "border": "#4C566A",
+        "keyword": "#81A1C1",
+        "function": "#88C0D0",
+        "string": "#A3BE8C",
+        "comment": "#8997A6",
+        "selection": "#434C5E",
+        "cursor": "#ECEFF4"
+      }
+    },
+    "solarized-light": {
+      "name": "Solarized Light",
+      "desc": "温润米白，适合日间使用",
+      "mode": "light",
+      "colors": {
+        "background": "#FDF6E3",
+        "sidebar": "#EEE8D5",
+        "panel": "#F5EFD9",
+        "card": "#FFFBED",
+        "foreground": "#586E75",
+        "accent": "#268BD2",
+        "border": "#D8CFB9",
+        "keyword": "#859900",
+        "function": "#268BD2",
+        "string": "#2AA198",
+        "comment": "#839496",
+        "selection": "#E6DFC9",
+        "cursor": "#586E75"
+      }
+    },
+    "paper": {
+      "name": "Paper",
+      "desc": "中性纸白，排版干净",
+      "mode": "light",
+      "colors": {
+        "background": "#F7F8FA",
+        "sidebar": "#EBEEF3",
+        "panel": "#FFFFFF",
+        "card": "#FFFFFF",
+        "foreground": "#273244",
+        "accent": "#4361EE",
+        "border": "#D8DEE9",
+        "keyword": "#9054BB",
+        "function": "#4361EE",
+        "string": "#2E8578",
+        "comment": "#8994A5",
+        "selection": "#DDE5F4",
+        "cursor": "#273244"
+      }
+    },
+    "mo-yun-han-xiang": {
+      "name": "墨韵寒香",
+      "desc": "玄青水墨 · 朱砂与石青",
+      "mode": "dark",
+      "colors": {
+        "background": "#181C1D",
+        "sidebar": "#222627",
+        "panel": "#222627",
+        "card": "#2A2F30",
+        "foreground": "#E6E6E6",
+        "accent": "#E35C58",
+        "border": "#3A4142",
+        "keyword": "#E35C58",
+        "function": "#5C92B5",
+        "string": "#C4A671",
+        "comment": "#747B81",
+        "selection": "#3A4750",
+        "cursor": "#FFFFFF"
+      }
+    },
+    "qing-hua-ci-ying": {
+      "name": "青花瓷影",
+      "desc": "瓷白与霁蓝 · 清雅明亮",
+      "mode": "light",
+      "colors": {
+        "background": "#FAFAFA",
+        "sidebar": "#F2F4F5",
+        "panel": "#F2F4F5",
+        "card": "#FFFFFF",
+        "foreground": "#1C2A39",
+        "accent": "#295C9D",
+        "border": "#DCE3E8",
+        "keyword": "#295C9D",
+        "function": "#1F83A3",
+        "string": "#C25E73",
+        "comment": "#889AA8",
+        "selection": "#D4E4F0",
+        "cursor": "#1C2A39"
+      }
+    },
+    "qian-li-jiang-shan": {
+      "name": "千里江山",
+      "desc": "青绿重彩 · 绢褐暖黑",
+      "mode": "dark",
+      "colors": {
+        "background": "#252321",
+        "sidebar": "#1E1C1B",
+        "panel": "#1E1C1B",
+        "card": "#2B2724",
+        "foreground": "#F0E9D1",
+        "accent": "#5CB390",
+        "border": "#403933",
+        "keyword": "#5CB390",
+        "function": "#4A859E",
+        "string": "#DDAA55",
+        "comment": "#7C8770",
+        "selection": "#4D3E29",
+        "cursor": "#E58A3B"
+      }
+    }
   });
   const DEFAULT_PRESET = 'tokyo-night';
   const HEX = /^#[0-9a-f]{6}$/i;
@@ -26,8 +202,11 @@
   const valid = (obj) => {
     if (!obj || typeof obj !== 'object' || typeof obj.preset !== 'string' || !Object.prototype.hasOwnProperty.call(PRESETS, obj.preset)) return null;
     if (obj.custom !== true) return { preset: obj.preset, custom: false, colors: { ...PRESETS[obj.preset].colors } };
-    if (!obj.colors || COLOR_KEYS.some((key) => !isHex(obj.colors[key]))) return null;
-    return { preset: obj.preset, custom: true, colors: Object.fromEntries(COLOR_KEYS.map((key) => [key, obj.colors[key].toUpperCase()])) };
+    // Saved themes from v1.1 only contain the original seven colors.
+    // Fill the six new syntax/selection colors from the selected preset.
+    if (!obj.colors || LEGACY_COLOR_KEYS.some((key) => !isHex(obj.colors[key]))) return null;
+    if (EXTRA_COLOR_KEYS.some((key) => obj.colors[key] !== undefined && !isHex(obj.colors[key]))) return null;
+    return { preset: obj.preset, custom: true, colors: Object.fromEntries(COLOR_KEYS.map((key) => [key, (obj.colors[key] ?? PRESETS[obj.preset].colors[key]).toUpperCase()])) };
   };
   const readStored = () => {
     try {
@@ -66,6 +245,105 @@
       --color-surface-hover: var(--zpt-highlight) !important;
       --color-sidebar-border: var(--zpt-border) !important;
     }
+
+    /* Semantic aliases cover newer ZCode/Tailwind panels and popovers.
+       Active themes only: official appearance is not changed on reset. */
+    html[data-zpt-theme-active="true"] {
+      --color-sidebar-background: var(--zpt-sidebar) !important;
+      --color-sidebar-foreground: var(--zpt-foreground) !important;
+      --color-sidebar-accent: var(--zpt-selected) !important;
+      --color-sidebar-accent-foreground: var(--zpt-foreground) !important;
+      --color-sidebar-primary: var(--zpt-accent) !important;
+      --color-sidebar-primary-foreground: var(--zpt-accent-contrast) !important;
+      --color-popover: var(--zpt-panel) !important;
+      --color-popover-foreground: var(--zpt-foreground) !important;
+      --color-text-primary: var(--zpt-foreground) !important;
+      --color-text-secondary: var(--zpt-foreground-muted) !important;
+      --color-foreground-subtle: var(--zpt-foreground-muted) !important;
+      --color-code-keyword: var(--zpt-keyword) !important;
+      --color-code-function: var(--zpt-function) !important;
+      --color-code-string: var(--zpt-string) !important;
+      --color-code-comment: var(--zpt-comment) !important;
+      --color-selection: var(--zpt-selection) !important;
+      --color-caret: var(--zpt-cursor) !important;
+      --zpt-radius: 2px;
+    }
+    html[data-zpt-theme-active="true"] body {
+      background-color: var(--zpt-background) !important;
+      color: var(--zpt-foreground);
+      scrollbar-color: var(--zpt-border) var(--zpt-background);
+    }
+    /* Many ZCode sidebar sections use literal Tailwind bg-* classes rather
+       than the semantic color tokens above. Mark the left shell by geometry
+       (not localized text) and override only that subtree. */
+    html[data-zpt-theme-active="true"] [data-zpt-shell-sidebar="true"],
+    html[data-zpt-theme-active="true"] [data-zpt-shell-sidebar="true"] > :is(div, aside, nav, section),
+    html[data-zpt-theme-active="true"] [data-zpt-shell-sidebar="true"] :is([class*="bg-"], [data-slot*="sidebar"], [class*="sidebar"], [class*="Sidebar"]) {
+      background-color: var(--zpt-sidebar) !important;
+      border-color: var(--zpt-border) !important;
+    }
+    html[data-zpt-theme-active="true"] [data-zpt-shell-sidebar="true"] {
+      color: var(--zpt-foreground) !important;
+      border-right: 1px solid var(--zpt-border) !important;
+      font-family: "Source Han Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
+    }
+    html[data-zpt-theme-active="true"] [data-zpt-shell-sidebar="true"] :is(h1,h2,h3,h4,button,a,label,p,span,[role="treeitem"],[role="listitem"]) {
+      color: var(--zpt-foreground) !important;
+    }
+    html[data-zpt-theme-active="true"] [data-zpt-shell-sidebar="true"] :is(small,time,[class*="text-muted"],[class*="text-gray-"],[class*="text-slate-"],[class*="text-zinc-"],[class*="text-neutral-"]) {
+      color: var(--zpt-foreground-muted) !important;
+    }
+    html[data-zpt-theme-active="true"] [data-zpt-shell-sidebar="true"] :is([class*="border-"],hr) {
+      border-color: var(--zpt-border) !important;
+    }
+    html[data-zpt-theme-active="true"] [data-zpt-shell-sidebar="true"] :is(button,a,[role="button"],[role="treeitem"],[role="listitem"]):hover {
+      background-color: var(--zpt-hover) !important;
+    }
+    html[data-zpt-theme-active="true"] [data-zpt-shell-sidebar="true"] :is([aria-selected="true"],[aria-current="page"],[data-state="active"],[data-active="true"],.active,.selected) {
+      background-color: var(--zpt-selected) !important;
+      color: var(--zpt-foreground) !important;
+    }
+    html[data-zpt-theme-active="true"] [data-zpt-shell-sidebar="true"] :is(input,textarea) {
+      background-color: var(--zpt-card) !important;
+      color: var(--zpt-foreground) !important;
+      border-color: var(--zpt-border) !important;
+    }
+    html[data-zpt-theme-active="true"] :is([role="dialog"],[role="menu"],[role="listbox"],[data-slot="popover-content"]) {
+      border-color: var(--zpt-border) !important;
+    }
+    html[data-zpt-theme-active="true"] :is([role="tab"],[data-zpt-shell-sidebar="true"] button) {
+      border-radius: var(--zpt-radius) !important;
+    }
+    html[data-zpt-theme-active="true"] :is(input,textarea,[contenteditable="true"],.cm-content) {
+      caret-color: var(--zpt-cursor) !important;
+    }
+    html[data-zpt-theme-active="true"] ::selection {
+      background: var(--zpt-selection) !important;
+      color: var(--zpt-foreground) !important;
+    }
+    /* Syntax tokens only for renderers with stable named token classes;
+       never recolor arbitrary Monaco spans/inline styles. */
+    html[data-zpt-theme-active="true"] :is(.hljs-keyword,.hljs-selector-tag,.token.keyword,.cm-keyword) { color: var(--zpt-keyword) !important; }
+    html[data-zpt-theme-active="true"] :is(.hljs-title.function_,.hljs-title.class_,.token.function,.token.class-name,.cm-def) { color: var(--zpt-function) !important; }
+    html[data-zpt-theme-active="true"] :is(.hljs-string,.token.string,.cm-string) { color: var(--zpt-string) !important; }
+    html[data-zpt-theme-active="true"] :is(.hljs-comment,.token.comment,.cm-comment) { color: var(--zpt-comment) !important; font-style: italic; }
+    html[data-zpt-theme-active="true"] :is(pre code,.hljs,.cm-content) { font-family: "JetBrains Mono","Fira Code",ui-monospace,monospace; }
+    /* Make theme management itself follow the selected dark/light palette. */
+    html[data-zpt-theme-active="true"] .zpt-overlay { color: var(--zpt-foreground); color-scheme: var(--zpt-scheme); }
+    html[data-zpt-theme-active="true"] .zpt-dialog { background: var(--zpt-panel); border-color: var(--zpt-border); border-radius: 8px; }
+    html[data-zpt-theme-active="true"] :is(.zpt-header,.zpt-footer,.zpt-editor) { border-color: var(--zpt-border); }
+    html[data-zpt-theme-active="true"] :is(.zpt-header h2,.zpt-heading,.zpt-color-row,.zpt-settings-title,.zpt-preset strong) { color: var(--zpt-foreground); }
+    html[data-zpt-theme-active="true"] :is(.zpt-note,.zpt-preset small,.zpt-color-value,.zpt-status,.zpt-eyebrow,.zpt-settings-desc) { color: var(--zpt-foreground-muted); }
+    html[data-zpt-theme-active="true"] :is(.zpt-editor,.zpt-preset,.zpt-btn,.zpt-close,#zpt-settings-open) {
+      background: var(--zpt-card); border-color: var(--zpt-border); color: var(--zpt-foreground);
+      border-radius: 4px;
+    }
+    html[data-zpt-theme-active="true"] .zpt-preset:hover { border-color: var(--zpt-accent); }
+    html[data-zpt-theme-active="true"] .zpt-preset[aria-pressed="true"] { border-color: var(--zpt-accent); box-shadow: inset 0 0 0 1px var(--zpt-accent); }
+    html[data-zpt-theme-active="true"] .zpt-color-row input { background: var(--zpt-panel); border-color: var(--zpt-border); }
+    html[data-zpt-theme-active="true"] .zpt-primary { background: var(--zpt-accent); color: var(--zpt-accent-contrast); border-color: var(--zpt-accent); }
+    html[data-zpt-theme-active="true"] .zpt-preview { background: var(--preview-background); color: var(--preview-foreground); }
+    .zpt-preview-code { margin-top: 8px; padding: 7px; border: 1px solid var(--preview-border); border-radius: 2px; background: var(--preview-panel); color: var(--preview-foreground); font: 10px/1.55 "JetBrains Mono","Fira Code",monospace; white-space: nowrap; overflow: hidden; }
     /* Integrated in ZCode Settings > Appearance, never fixed over the workspace. */
     #zpt-settings-row { padding: 12px 16px; border-top: 1px solid var(--color-border, #454d60); color: var(--color-foreground, #e6eaf4); }
     .zpt-settings-layout { display: grid; grid-template-columns: minmax(0,1fr) 192px; align-items: center; gap: 16px; }
@@ -120,19 +398,70 @@
     const sheet = document.createElement('style'); sheet.id = 'zpt-theme-styles'; sheet.textContent = tokens;
     (document.head || document.documentElement).appendChild(sheet);
   }
+  const DERIVED_KEYS = ['foreground-muted', 'highlight', 'hover', 'selected', 'accent-contrast', 'scheme'];
+  function contrastText(hex) {
+    const rgb = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+    const linear = rgb.map((c) => c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+    const lum = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+    return lum > 0.18 ? '#181C1D' : '#FFFFFF';
+  }
+  let shellSidebar = null;
+  function mountShellTheme() {
+    if (typeof document.querySelectorAll !== 'function') return;
+    const screenW = window.innerWidth || root.clientWidth || 1440;
+    const screenH = window.innerHeight || root.clientHeight || 900;
+    if (screenW < 500) return;
+    let best = null;
+    let score = 0;
+    const consider = (node) => {
+      if (!node || typeof node.getBoundingClientRect !== 'function' || node.closest?.('.zpt-overlay')) return;
+      const rect = node.getBoundingClientRect();
+      if (rect.left < -12 || rect.left > 12 || rect.top > 160 ||
+          rect.width < 175 || rect.width > Math.min(480, screenW * 0.48) ||
+          rect.height < screenH * 0.52) return;
+      const s = rect.width * rect.height - Math.abs(rect.left) * 1000;
+      if (s > score) { best = node; score = s; }
+    };
+    for (const node of document.querySelectorAll('aside,[data-sidebar],[data-slot*="sidebar"],[class*="sidebar"],[class*="Sidebar"]')) consider(node);
+    if (!best) {
+      // Fallback for unlabelled React layouts: bounded structural traversal.
+      // Find a full-height left column rather than assuming class names.
+      const base = document.getElementById('root') || document.getElementById('app') || document.body;
+      const queue = [{ node: base, depth: 0 }];
+      let checked = 0;
+      while (queue.length && checked++ < 500) {
+        const item = queue.shift();
+        if (!item?.node || item.depth > 7) continue;
+        consider(item.node);
+        if (item.depth < 7 && item.node.children) {
+          for (const child of item.node.children) queue.push({ node: child, depth: item.depth + 1 });
+        }
+      }
+    }
+    if (best === shellSidebar) return;
+    if (shellSidebar?.removeAttribute) shellSidebar.removeAttribute('data-zpt-shell-sidebar');
+    shellSidebar = best;
+    if (best) best.setAttribute('data-zpt-shell-sidebar', 'true');
+  }
   function applyTheme(p) {
     if (!p) {
       root.removeAttribute('data-zpt-theme-active');
       root.removeAttribute('data-zpt-theme-preset');
-      for (const key of COLOR_KEYS) root.style.removeProperty('--zpt-' + key);
-      root.style.removeProperty('--zpt-foreground-muted');
-      root.style.removeProperty('--zpt-highlight');
+      root.removeAttribute('data-zpt-theme-mode');
+      for (const key of [...COLOR_KEYS, ...DERIVED_KEYS]) root.style.removeProperty('--zpt-' + key);
     } else {
+      const preset = PRESETS[p.preset];
       for (const key of COLOR_KEYS) root.style.setProperty('--zpt-' + key, p.colors[key]);
       root.style.setProperty('--zpt-foreground-muted', p.colors.foreground + 'B8');
       root.style.setProperty('--zpt-highlight', p.colors.accent + '22');
+      root.style.setProperty('--zpt-hover', p.colors.accent + '14');
+      root.style.setProperty('--zpt-selected', p.colors.accent + '26');
+      root.style.setProperty('--zpt-accent-contrast', contrastText(p.colors.accent));
+      root.style.setProperty('--zpt-scheme', preset.mode);
       root.setAttribute('data-zpt-theme-active', 'true');
       root.setAttribute('data-zpt-theme-preset', p.preset);
+      root.setAttribute('data-zpt-theme-mode', preset.mode);
+      mountShellTheme();
     }
     refreshSettingsLabel();
   }
@@ -183,9 +512,9 @@
     modal.className = 'zpt-overlay';
     modal.innerHTML = `
       <section class="zpt-dialog" role="dialog" aria-modal="true" aria-labelledby="zpt-title">
-        <header class="zpt-header"><div><div class="zpt-eyebrow">ZCODE · APPEARANCE</div><h2 id="zpt-title">主题管理器</h2><p class="zpt-note">6 套预设 · 自定义颜色 · 即时预览 · 恢复官方主题</p></div><button class="zpt-close" aria-label="关闭并取消预览" type="button">×</button></header>
+        <header class="zpt-header"><div><div class="zpt-eyebrow">ZCODE · APPEARANCE</div><h2 id="zpt-title">主题管理器</h2><p class="zpt-note">9 套预设 · 全局换肤 · 语法配色 · 即时预览</p></div><button class="zpt-close" aria-label="关闭并取消预览" type="button">×</button></header>
         <div class="zpt-content"><section aria-label="主题预设"><div class="zpt-heading">配色预设</div><div class="zpt-presets">${Object.entries(PRESETS).map(([id, p]) => presetMarkup(id, p)).join('')}</div><p class="zpt-note" style="margin-top:13px">部分明暗模式专用的组件仍由 ZCode 本身控制；浅色主题建议搭配 ZCode 官方浅色模式。</p></section>
-        <section aria-label="自定义颜色"><div class="zpt-heading">精细调色 <span style="color:#9daec7;font-weight:400">支持实时预览</span></div><div class="zpt-editor"><div class="zpt-colors">${COLOR_KEYS.map((k) => `<label class="zpt-color-row" for="zpt-color-${k}"><span>${LABELS[k]}</span><span style="display:flex;align-items:center;gap:7px"><span class="zpt-color-value" data-value="${k}"></span><input type="color" id="zpt-color-${k}" data-color="${k}" aria-label="${LABELS[k]}"></span></label>`).join('')}</div><div class="zpt-preview" aria-label="模拟界面预览"><div class="zpt-preview-top"><i class="zpt-preview-dot"></i> ZCode · Preview</div><div class="zpt-preview-pane"><div class="zpt-preview-sidebar"></div><div class="zpt-preview-card">AI Workspace<br><span class="zpt-preview-btn">Continue →</span></div></div></div></div></section></div>
+        <section aria-label="自定义颜色"><div class="zpt-heading">精细调色 <span style="color:#9daec7;font-weight:400">支持实时预览</span></div><div class="zpt-editor"><div class="zpt-colors">${COLOR_KEYS.map((k) => `<label class="zpt-color-row" for="zpt-color-${k}"><span>${LABELS[k]}</span><span style="display:flex;align-items:center;gap:7px"><span class="zpt-color-value" data-value="${k}"></span><input type="color" id="zpt-color-${k}" data-color="${k}" aria-label="${LABELS[k]}"></span></label>`).join('')}</div><div class="zpt-preview" aria-label="模拟界面预览"><div class="zpt-preview-top"><i class="zpt-preview-dot"></i> ZCode · Preview</div><div class="zpt-preview-pane"><div class="zpt-preview-sidebar"></div><div class="zpt-preview-card">AI Workspace<br><span class="zpt-preview-btn">Continue →</span></div></div><div class="zpt-preview-code"><span style="color:var(--preview-keyword)">const</span> <span style="color:var(--preview-function)">greet</span> = <span style="color:var(--preview-string)">"你好"</span> <span style="color:var(--preview-comment);font-style:italic">// 注释</span></div></div></div></section></div>
         <footer class="zpt-footer"><button type="button" class="zpt-btn zpt-reset">恢复官方默认</button><div class="zpt-actions"><button type="button" class="zpt-btn zpt-cancel">取消</button><button type="button" class="zpt-btn zpt-primary">应用主题</button></div><div class="zpt-status" aria-live="polite" style="flex-basis:100%"></div></footer>
       </section>`;
     document.body.appendChild(modal);
@@ -256,12 +585,20 @@
     // React can recreate the appearance card on navigation/theme changes.
     // Reattach to the new card only when missing; no permanent floating UI.
     mountSettingsEntry();
-    const observer = new MutationObserver(mountSettingsEntry);
+    // Batch React remounts into one frame; both settings and sidebar may change.
+    let scheduled = false;
+    const refresh = () => {
+      if (scheduled) return;
+      scheduled = true;
+      const defer = window.requestAnimationFrame || ((cb) => setTimeout(cb, 80));
+      defer(() => { scheduled = false; mountSettingsEntry(); mountShellTheme(); });
+    };
+    const observer = new MutationObserver(refresh);
     observer.observe(document.body, { childList: true, subtree: true });
   }
   // Lightweight test hook; tests set this before importing to avoid mounting any UI.
   if (window.__ZPT_TEST_MODE__) {
-    window.__ZPT_TEST_API__ = { PRESETS, COLOR_KEYS, valid, makePreset, readStored, persist, applyTheme, isHex, getCommitted: () => committed, mountSettingsEntry, themeSummary };
+    window.__ZPT_TEST_API__ = { PRESETS, COLOR_KEYS, valid, makePreset, readStored, persist, applyTheme, isHex, getCommitted: () => committed, mountSettingsEntry, mountShellTheme, themeSummary };
     return;
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });

@@ -2,6 +2,14 @@
 
 All notable changes for this downstream fork are documented here. The fork preserves the upstream MIT license and credits its author.
 
+## 2026-11-04 — Theme Manager v1.2.0 (nine palettes and full-shell sidebar)
+- Added three Chinese-inspired palettes: 墨韵寒香, 青花瓷影, 千里江山, with exact requested syntax, selection and cursor colors.
+- Completed syntax / selection / cursor tokens for all six existing themes; the editor now exposes thirteen adjustable colors.
+- Improved sidebar theming with scoped semantic aliases and geometry-bounded left-shell styling, including list hover and selected states.
+- Made the theme dialog follow its active dark/light palette and added a syntax preview.
+- Kept existing v1 seven-color custom presets compatible and reversible; added tests for palettes, migration, security, full-shell selection, and CSS scope.
+- ZCode-version-specific DOM layouts and custom Monaco rendering still require on-device verification.
+
 ## Unreleased — ZCode Enhancer branding and settings integration
 - Renamed the public-facing project title to **ZCode Enhancer** (repository slug, existing install directories and systemd unit names unchanged for compatibility).
 - Moved the theme manager entry from a permanently visible bottom-right floating launcher into **Settings > Appearance > Custom theme**.
