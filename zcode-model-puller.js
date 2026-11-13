@@ -78,6 +78,80 @@
       --zpull-trigger-border: transparent;
       --zpull-trigger-hover-bg: rgba(255, 255, 255, 0.14);
       --zpull-trigger-icon: #60a5fa;
+      --zpull-accent: #2563eb;
+      --zpull-accent-fg: #ffffff;
+    }
+
+    /* 深度适配中式自定义主题 (ZCode Theme Manager v2.0+) */
+    html[data-zpt-theme-active="true"] {
+      --zpull-bg: var(--zpt-card);
+      --zpull-fg: var(--zpt-foreground);
+      --zpull-fg-muted: var(--zpt-foreground-muted);
+      --zpull-border: var(--zpt-border);
+      --zpull-border-subtle: var(--zpt-border);
+      --zpull-input-bg: var(--zpt-background);
+      --zpull-input-border: var(--zpt-border);
+      --zpull-list-bg: var(--zpt-background);
+      --zpull-item-hover: var(--zpt-hover);
+      --zpull-header-bg: var(--zpt-panel);
+      --zpull-footer-bg: var(--zpt-panel);
+      --zpull-btn-cancel-bg: var(--zpt-panel);
+      --zpull-btn-cancel-border: var(--zpt-border);
+      --zpull-btn-cancel-fg: var(--zpt-foreground);
+      --zpull-btn-cancel-hover: var(--zpt-hover);
+      --zpull-badge-exists-bg: var(--zpt-panel);
+      --zpull-badge-exists-fg: var(--zpt-foreground-muted);
+      --zpull-badge-exists-border: var(--zpt-border);
+      --zpull-badge-new-bg: var(--zpt-highlight);
+      --zpull-badge-new-fg: var(--zpt-accent);
+      --zpull-badge-new-border: var(--zpt-accent);
+      --zpull-trigger-bg: var(--zpt-card);
+      --zpull-trigger-fg: var(--zpt-foreground);
+      --zpull-trigger-border: var(--zpt-border);
+      --zpull-trigger-hover-bg: var(--zpt-hover);
+      --zpull-trigger-icon: var(--zpt-accent);
+      --zpull-accent: var(--zpt-accent);
+      --zpull-accent-fg: var(--zpt-accent-contrast, #ffffff);
+    }
+
+    .zcode-pull-filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .zcode-pull-filter-chip {
+      background: var(--zpull-btn-cancel-bg);
+      border: 1px solid var(--zpull-btn-cancel-border);
+      color: var(--zpull-fg-muted);
+      font-size: 11.5px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .zcode-pull-filter-chip:hover {
+      color: var(--zpull-fg);
+      border-color: var(--zpull-accent, #2563eb);
+    }
+    .zcode-pull-filter-chip.active {
+      background: var(--zpull-badge-new-bg);
+      color: var(--zpull-badge-new-fg);
+      border-color: var(--zpull-badge-new-border);
+      font-weight: 600;
+    }
+    .zcode-pull-prune-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--zpull-fg-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+    .zcode-pull-prune-label input {
+      accent-color: var(--zpull-accent, #2563eb);
+      cursor: pointer;
     }
 
     /* 与官方按钮同族的次级按钮样式（尺寸在注入时向官方按钮同步） */
@@ -220,7 +294,7 @@
       transition: border-color 0.15s;
     }
     .zcode-pull-search:focus {
-      border-color: #3b82f6;
+      border-color: var(--zpull-accent, #3b82f6);
     }
     .zcode-pull-btn-group {
       display: flex;
@@ -265,7 +339,7 @@
     }
     .zcode-pull-item input[type="checkbox"] {
       margin-right: 12px;
-      accent-color: #2563eb;
+      accent-color: var(--zpull-accent, #2563eb);
       width: 16px;
       height: 16px;
       cursor: pointer;
@@ -328,9 +402,9 @@
       border-radius: 8px;
       font-size: 13px;
       font-weight: 500;
-      background: #2563eb;
-      border: 1px solid rgba(59, 130, 246, 0.5);
-      color: #fff;
+      background: var(--zpull-accent, #2563eb);
+      border: 1px solid var(--zpull-accent, rgba(59, 130, 246, 0.5));
+      color: var(--zpull-accent-fg, #fff);
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -338,7 +412,7 @@
       transition: all 0.15s;
     }
     .zcode-pull-btn-submit:hover {
-      background: #1d4ed8;
+      filter: brightness(1.08);
     }
     .zcode-pull-btn-submit:disabled {
       opacity: 0.5;
@@ -613,6 +687,19 @@
       if (!exists) newCount++;
     }
 
+    let activeCategory = "all";
+    const CATEGORIES = [
+      { id: "all", label: `全部 (${models.length})` },
+      { id: "new", label: `新模型 (${newCount})` },
+      { id: "exists", label: `已添加 (${models.length - newCount})` },
+      { id: "glm", label: "GLM / 智谱" },
+      { id: "deepseek", label: "DeepSeek" },
+      { id: "qwen", label: "Qwen / 通义" },
+      { id: "claude", label: "Claude" },
+      { id: "gpt", label: "GPT / o1 / o3" },
+      { id: "gemini", label: "Gemini" },
+    ];
+
     const overlay = document.createElement("div");
     overlay.className = "zcode-pull-modal-overlay";
 
@@ -620,7 +707,7 @@
       <div class="zcode-pull-modal">
         <div class="zcode-pull-header">
           <div class="zcode-pull-title">
-            <svg class="zcode-pull-bolt-icon" viewBox="0 0 24 24" style="color: #3b82f6;">
+            <svg class="zcode-pull-bolt-icon" viewBox="0 0 24 24" style="color: var(--zpull-accent, #3b82f6);">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
             </svg>
             <span>选择要同步的模型 (共 ${models.length} 个，待添加新模型 ${newCount} 个)</span>
@@ -629,12 +716,21 @@
         </div>
         <div class="zcode-pull-body">
           <div class="zcode-pull-toolbar">
-            <input type="text" class="zcode-pull-search" id="zcode-modal-search" placeholder="搜索模型名称..." />
+            <input type="text" class="zcode-pull-search" id="zcode-modal-search" placeholder="搜索模型名称（支持关键词过滤）..." />
             <div class="zcode-pull-btn-group">
               <button class="zcode-pull-mini-btn" id="zcode-select-all">全选</button>
+              <button class="zcode-pull-mini-btn" id="zcode-select-invert">反选</button>
+              <button class="zcode-pull-mini-btn" id="zcode-select-filtered">选当前筛选</button>
+              <button class="zcode-pull-mini-btn" id="zcode-select-new">仅新模型 (${newCount})</button>
+              <button class="zcode-pull-mini-btn" id="zcode-copy-ids" title="复制已勾选的模型 ID">复制ID</button>
               <button class="zcode-pull-mini-btn" id="zcode-select-none">清空</button>
-              <button class="zcode-pull-mini-btn" id="zcode-select-new">仅选新模型 (${newCount})</button>
             </div>
+          </div>
+          <div class="zcode-pull-filter-bar" id="zcode-modal-filters">
+            ${CATEGORIES.map(
+              (c) =>
+                `<button type="button" class="zcode-pull-filter-chip ${c.id === "all" ? "active" : ""}" data-cat="${c.id}">${c.label}</button>`
+            ).join("")}
           </div>
           <div class="zcode-pull-list" id="zcode-modal-list">
             ${models
@@ -654,38 +750,85 @@
               })
               .join("")}
           </div>
+          <label class="zcode-pull-prune-label">
+            <input type="checkbox" id="zcode-prune-unchecked" />
+            <span>同步清理：将未勾选的「已添加」模型从当前供应商列表中移除</span>
+          </label>
         </div>
         <div class="zcode-pull-footer">
           <div class="zcode-pull-count-info" id="zcode-pull-count-info">
-            已选中 <strong style="color: #2563eb;" id="zcode-selected-num">${newCount}</strong> / ${models.length} 个模型
+            已选中 <strong style="color: var(--zpull-accent, #2563eb);" id="zcode-selected-num">${newCount}</strong> / ${models.length} 个模型
           </div>
           <div class="zcode-pull-footer-btns">
             <button class="zcode-pull-btn-cancel" id="zcode-modal-cancel">取消</button>
             <button class="zcode-pull-btn-submit" id="zcode-modal-confirm" ${
               newCount === 0 ? "disabled" : ""
             }>
-              <span>确认添加并保存 (<span id="zcode-btn-selected-num">${newCount}</span>)</span>
+              <span>确认同步并保存 (<span id="zcode-btn-selected-num">${newCount}</span>)</span>
             </button>
           </div>
         </div>
       </div>
     `;
 
+    const pruneCheckbox = overlay.querySelector("#zcode-prune-unchecked");
+
     function updateCountsOnly() {
       let selCount = 0;
+      let uncheckedExistingCount = 0;
       for (const [_, info] of stateMap) {
         if (info.selected) selCount++;
+        else if (info.exists) uncheckedExistingCount++;
       }
       const numSpan = overlay.querySelector("#zcode-selected-num");
       const btnNumSpan = overlay.querySelector("#zcode-btn-selected-num");
       const confirmBtn = overlay.querySelector("#zcode-modal-confirm");
+      const pruneMode = !!pruneCheckbox?.checked;
 
       if (numSpan) numSpan.textContent = selCount;
       if (btnNumSpan) btnNumSpan.textContent = selCount;
-      if (confirmBtn) confirmBtn.disabled = selCount === 0;
+      if (confirmBtn) confirmBtn.disabled = selCount === 0 && !(pruneMode && uncheckedExistingCount > 0);
     }
 
     const listContainer = overlay.querySelector("#zcode-modal-list");
+    const searchInput = overlay.querySelector("#zcode-modal-search");
+
+    function matchesCategory(id, info, cat) {
+      const lower = id.toLowerCase();
+      if (cat === "all") return true;
+      if (cat === "new") return !info.exists;
+      if (cat === "exists") return info.exists;
+      if (cat === "glm") return lower.includes("glm") || lower.includes("chatglm") || lower.includes("zhipu");
+      if (cat === "deepseek") return lower.includes("deepseek");
+      if (cat === "qwen") return lower.includes("qwen") || lower.includes("qwq");
+      if (cat === "claude") return lower.includes("claude");
+      if (cat === "gpt") return lower.includes("gpt") || /^o[134]/.test(lower) || lower.includes("/o1") || lower.includes("/o3");
+      if (cat === "gemini") return lower.includes("gemini");
+      return true;
+    }
+
+    function applyFilter() {
+      const kw = (searchInput?.value || "").toLowerCase().trim();
+      const items = listContainer.querySelectorAll(".zcode-pull-item");
+      items.forEach((it) => {
+        const id = it.getAttribute("data-id");
+        const info = stateMap.get(id);
+        const okKw = !kw || id.toLowerCase().includes(kw);
+        const okCat = info ? matchesCategory(id, info, activeCategory) : true;
+        it.style.display = okKw && okCat ? "flex" : "none";
+      });
+    }
+
+    function syncCheckboxesFromState() {
+      listContainer.querySelectorAll(".zcode-pull-item").forEach((it) => {
+        const id = it.getAttribute("data-id");
+        const cb = it.querySelector("input[type='checkbox']");
+        const info = stateMap.get(id);
+        if (cb && info) cb.checked = info.selected;
+      });
+      updateCountsOnly();
+    }
+
     listContainer.addEventListener("click", (e) => {
       const itemEl = e.target.closest(".zcode-pull-item");
       if (!itemEl) return;
@@ -699,43 +842,65 @@
       }
     });
 
-    const searchInput = overlay.querySelector("#zcode-modal-search");
-    searchInput.oninput = (e) => {
-      const kw = e.target.value.toLowerCase().trim();
-      const items = listContainer.querySelectorAll(".zcode-pull-item");
-      items.forEach((it) => {
-        const id = it.getAttribute("data-id").toLowerCase();
-        it.style.display = id.includes(kw) ? "flex" : "none";
+    searchInput.oninput = () => applyFilter();
+    pruneCheckbox?.addEventListener("change", () => updateCountsOnly());
+
+    overlay.querySelector("#zcode-modal-filters")?.addEventListener("click", (e) => {
+      const chip = e.target.closest(".zcode-pull-filter-chip");
+      if (!chip) return;
+      activeCategory = chip.getAttribute("data-cat") || "all";
+      overlay.querySelectorAll(".zcode-pull-filter-chip").forEach((c) => {
+        c.classList.toggle("active", c === chip);
       });
-    };
+      applyFilter();
+    });
 
     overlay.querySelector("#zcode-select-all").onclick = () => {
-      for (const [id, info] of stateMap) {
-        info.selected = true;
-      }
-      listContainer.querySelectorAll("input[type='checkbox']").forEach((cb) => (cb.checked = true));
-      updateCountsOnly();
+      for (const [_, info] of stateMap) info.selected = true;
+      syncCheckboxesFromState();
+    };
+
+    overlay.querySelector("#zcode-select-invert").onclick = () => {
+      for (const [_, info] of stateMap) info.selected = !info.selected;
+      syncCheckboxesFromState();
+    };
+
+    overlay.querySelector("#zcode-select-filtered").onclick = () => {
+      listContainer.querySelectorAll(".zcode-pull-item").forEach((it) => {
+        if (it.style.display !== "none") {
+          const id = it.getAttribute("data-id");
+          const info = stateMap.get(id);
+          if (info) info.selected = true;
+        }
+      });
+      syncCheckboxesFromState();
     };
 
     overlay.querySelector("#zcode-select-none").onclick = () => {
-      for (const [id, info] of stateMap) {
-        info.selected = false;
-      }
-      listContainer.querySelectorAll("input[type='checkbox']").forEach((cb) => (cb.checked = false));
-      updateCountsOnly();
+      for (const [_, info] of stateMap) info.selected = false;
+      syncCheckboxesFromState();
     };
 
     overlay.querySelector("#zcode-select-new").onclick = () => {
+      for (const [_, info] of stateMap) info.selected = !info.exists;
+      syncCheckboxesFromState();
+    };
+
+    overlay.querySelector("#zcode-copy-ids").onclick = async () => {
+      const selectedIds = [];
       for (const [id, info] of stateMap) {
-        info.selected = !info.exists;
+        if (info.selected) selectedIds.push(id);
       }
-      listContainer.querySelectorAll(".zcode-pull-item").forEach((it) => {
-        const id = it.getAttribute("data-id");
-        const cb = it.querySelector("input[type='checkbox']");
-        const info = stateMap.get(id);
-        if (cb && info) cb.checked = info.selected;
-      });
-      updateCountsOnly();
+      if (selectedIds.length === 0) {
+        showToast("⚠️ 请先勾选要复制的模型");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(selectedIds.join(", "));
+        showToast(`📋 已复制 ${selectedIds.length} 个模型 ID 到剪贴板`);
+      } catch (_e) {
+        showToast("⚠️ 复制失败，请检查剪贴板权限");
+      }
     };
 
     const closeModal = () => overlay.remove();
@@ -745,10 +910,13 @@
     const confirmBtn = overlay.querySelector("#zcode-modal-confirm");
     confirmBtn.onclick = async () => {
       const toAdd = [];
+      const toPrune = new Set();
+      const pruneMode = !!pruneCheckbox?.checked;
       for (const [id, info] of stateMap) {
         if (info.selected) toAdd.push(id);
+        else if (pruneMode && info.exists) toPrune.add(id);
       }
-      if (toAdd.length === 0) return;
+      if (toAdd.length === 0 && toPrune.size === 0) return;
 
       confirmBtn.disabled = true;
       confirmBtn.innerHTML = `<span>⏳ 正在保存...</span>`;
@@ -773,14 +941,16 @@
         const existingIds = getExistingModelIds(rule);
         const added = toAdd.filter((id) => !existingIds.has(id));
 
-        // 1. 写入模型清单（保持既有顺序，新模型追加在末尾）
-        const personal = Array.isArray(pcfg.personalModelIds) ? pcfg.personalModelIds.slice() : [];
+        // 1. 写入模型清单（保持既有顺序，新模型追加在末尾；若开启同步清理则剔除未勾选已有模型）
+        let personal = Array.isArray(pcfg.personalModelIds) ? pcfg.personalModelIds.slice() : [];
+        if (toPrune.size > 0) personal = personal.filter((id) => !toPrune.has(id));
         for (const id of toAdd) {
           if (!personal.includes(id)) personal.push(id);
         }
         pcfg.personalModelIds = personal;
 
-        const order = Array.isArray(pcfg.modelOrder) ? pcfg.modelOrder.slice() : [];
+        let order = Array.isArray(pcfg.modelOrder) ? pcfg.modelOrder.slice() : [];
+        if (toPrune.size > 0) order = order.filter((id) => !toPrune.has(id));
         for (const id of toAdd) {
           if (!order.includes(id)) order.push(id);
         }
@@ -790,6 +960,12 @@
         const mcr = cfg.config.modelConfigRules || (cfg.config.modelConfigRules = {});
         if (!Array.isArray(mcr.providerModelRules)) mcr.providerModelRules = [];
         if (!Array.isArray(mcr.manualProviderModelRules)) mcr.manualProviderModelRules = [];
+
+        if (toPrune.size > 0) {
+          mcr.providerModelRules = mcr.providerModelRules.filter(
+            (r) => !(r?.providerId === rule.providerId && toPrune.has(r.modelId))
+          );
+        }
 
         const siblings = mcr.providerModelRules.filter((r) => r?.providerId === rule.providerId && r.config);
         if (siblings.length > 0 && added.length > 0) {
@@ -808,7 +984,7 @@
         }
 
         console.log(
-          `[ZCode-Model-Puller] 成功写入 ${added.length} 个新模型到:`,
+          `[ZCode-Model-Puller] 成功写入 ${added.length} 个新模型 (清理 ${toPrune.size} 个) 到:`,
           rule.providerName || rule.providerId
         );
         const ok = await writeZCodeConfig(cfg);
@@ -816,7 +992,11 @@
           throw new Error("写入配置文件失败");
         }
 
-        showToast(`🎉 成功添加 ${toAdd.length} 个模型！已自动刷新列表`);
+        const summaryMsg =
+          toPrune.size > 0
+            ? `🎉 已同步保留 ${toAdd.length} 个模型，清理 ${toPrune.size} 个旧模型！`
+            : `🎉 成功同步 ${toAdd.length} 个模型！已自动刷新列表`;
+        showToast(summaryMsg);
         closeModal();
 
         // 自动触发官方原生刷新，新模型卡片即刻展现在列表中！
@@ -827,7 +1007,7 @@
         console.error("[ZCode-Model-Puller] 保存失败:", err);
         showToast(`❌ 保存出错: ${err.message}`);
         confirmBtn.disabled = false;
-        confirmBtn.innerHTML = `<span>确认添加并保存 (${toAdd.length})</span>`;
+        confirmBtn.innerHTML = `<span>确认同步并保存 (${toAdd.length})</span>`;
       }
     };
 

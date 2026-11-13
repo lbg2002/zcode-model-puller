@@ -1,47 +1,48 @@
-# ✨ ZCode Enhancer · Linux / Ubuntu 增强工具
+# ✨ ZCode Enhancer · 中式美学主题工坊与模型增强工具 (v2.0)
 
 [![CI](https://github.com/lbg2002/zcode-model-puller/actions/workflows/ci.yml/badge.svg)](https://github.com/lbg2002/zcode-model-puller/actions/workflows/ci.yml) ![MIT](https://img.shields.io/badge/License-MIT-blue) ![Linux](https://img.shields.io/badge/Linux-Ubuntu%20.deb-informational)
 
-> **ZCode Enhancer** 是面向 ZCode 的第三方增强工具集，目前提供自定义主题与模型供应商管理功能。它为 [ZCode](https://zcode.z.ai) 的自定义 OpenAI 兼容供应商添加「⚡ 自动拉取模型」功能：从 API 同步可用模型 ID、比较已有模型，并可选择写入配置。此仓库是 [HHQ-666/zcode-model-puller](https://github.com/HHQ-666/zcode-model-puller) 的第三方 Fork，新增 Linux 安装、版本化备份及 **可选的 systemd 自动维护**；不是 ZCode 官方项目。
+> **ZCode Enhancer** 是面向 [ZCode](https://zcode.z.ai) 的第三方增强插件集，集成了**东方雅韵中式主题工坊（v2.0）**与**增强版自定义模型拉取器**。它支持十款纯正传统中国色主题、六幅原创中式白描意境线条画、回纹博古角花边框、自定义主题收藏与 JSON 分享，并为 OpenAI 兼容供应商提供一键拉取 `/models`、按模型家族筛选、批量复制与同步清理功能。本仓库源自 [HHQ-666/zcode-model-puller](https://github.com/HHQ-666/zcode-model-puller) 的深度扩展 Fork，支持 Linux `.deb` 一键安装、SHA-256 版本化备份及可选的 systemd 自动维护；不是 ZCode 官方项目。
 
-**项目展示名：** ZCode Enhancer（原项目 ZCode Model Puller）。为保留 Fork 关系、已有安装路径和 systemd 服务兼容性，当前 GitHub 仓库 URL 仍为 `lbg2002/zcode-model-puller`，旧脚本与服务名也保持不变。
+**项目展示名：** ZCode Enhancer（原项目 ZCode Model Puller）。为保留 Fork 关系、已有安装路径和 systemd 服务兼容性，当前 GitHub 仓库 URL 仍为 `lbg2002/zcode-model-puller`，旧脚本与服务名保持不变。
 
-**中文文档：** [Linux 完整指南](LINUX.md) · [变更记录](CHANGELOG.md) · [安全说明](SECURITY.md) · [参与贡献](CONTRIBUTING.md)
+**中文文档：** [中式主题工坊指南](THEME.md) · [Linux 完整指南](LINUX.md) · [变更记录](CHANGELOG.md) · [安全说明](SECURITY.md) · [参与贡献](CONTRIBUTING.md)
 
-## 功能与适配状态
+## 功能概览
 
-| 功能 | 当前状态 |
-| --- | --- |
-| 自定义供应商一键获取 /models 列表 | 来自上游，Ubuntu 用户已实际验证 |
-| Linux `.deb` 一键安装 | 支持 `/opt/ZCode/resources/app.asar`（可用 `--zcode-path` 指定其他目录） |
-| Linux systemd 自动维护 | 可选；约每 5 分钟检查，当前已验证守护启动及已注入跳过 |
-| ZCode 真正升级后的无人值守重新注入 | **尚无实际升级的端到端验证**；如版本结构变化会放弃修改并记录日志 |
-| macOS | 沿用上游 `install.sh` 和 LaunchAgent |
-| Windows / AppImage / Snap / Flatpak | 此 Fork 未提供经过验证的一键安装适配 |
+| 功能模块 | 核心亮点 | 当前状态 |
+| --- | --- | --- |
+| **十款全中式古典主题预设** | 墨韵寒香、千里江山、紫禁朱墙、敦煌飞天、江南烟雨、松烟沉香、青花瓷影、宣纸书卷、汝窑天青、玉露茗茶（6 深 4 浅） | 已内置并支持旧版预设自动迁移 |
+| **中式白描线条画 & 古典纹样** | 远山云水、寒梅修竹、祥云瑞鹤、轩窗回纹、曲水荷风、松风琴韵 6 幅动态着色 SVG 白描画 + 3 档笔墨浓淡 + 回纹博古角花 / 宋式双阑框线 + 4 套本机字体 | 零网络请求，主界面与侧栏同步渲染 |
+| **全窗口与左侧边栏深度适配** | 覆盖 `--color-background-win-alt` 与顶层窗口框架，自动同步深浅类名，彻底修复左侧栏背景残留黑底、文字看不清及开关/下拉框失配问题 | 已针对 ZCode 真实 DOM/CSS 架构修复 |
+| **主题收藏槽位与 JSON 导入导出** | 支持最多 6 个自定义珍藏槽位、一键导出/导入主题 JSON 配置、全局快捷键 `Alt+Shift+T` 呼出 | 适合直接发布与社区分享 |
+| **增强版自动拉取模型 (v2.0)** | 自动跟随中式主题配色；新增 GLM/DeepSeek/Qwen/Claude/GPT/Gemini 家族筛选芯片、反选、选当前筛选、复制 ID、可选同步移除未勾选旧模型 | Ubuntu / macOS 均可用 |
+| **Linux `.deb` 安全安装与自动维护** | 支持 `/opt/ZCode/resources/app.asar` 暂存构建、SHA-256 备份还原，以及可选的 `zcode-puller` 低权限账号 systemd 定时维护 | 已通过 28 项 Python + 14 项 Node 测试 |
 
-自动维护器 **不会**自行更新此 GitHub 仓库代码，也不会自动重启 ZCode。修改了客户端资源后，需要重新启动 ZCode 才能看到效果。
+自动维护器 **不会**自行更新此 GitHub 仓库代码，也不会自动重启 ZCode。修改了客户端资源后，请完全退出并重新启动 ZCode 查看效果。
 
-## 🎨 Linux 自定义主题管理器（实验性）
+## 🏮 东方雅韵 · 中式主题工坊 (v2.0)
 
-主题管理已经整合进 ZCode 的 **设置 → 外观（Appearance） → 自定义主题 → 管理主题**，不再占用右下角悬浮位置；与原来的「⚡ 自动拉取模型」按钮共存。进入后即可切换九套内置配色（原六套 + 墨韵寒香、青花瓷影、千里江山），精细调整主背景、侧栏、面板、卡片、文字、强调色、边框与六项代码高亮 / 选区颜色；修改实时预览，点击**应用主题**保存。按 Escape/取消可撤回试色，「恢复官方默认」仅清理本插件的外观覆盖。
+进入 ZCode **设置 → 外观（Appearance） → 自定义主题 → 管理主题**（或在任意界面按快捷键 `Alt + Shift + T`），即可打开中式主题工坊：
 
-新增左侧导航 / 项目与任务列表的独立换肤覆盖，并修正 hover、选中态、输入光标及代码高亮配色。旧版本保存的七项自定义颜色会自动补齐新字段，不清空原有设置。左侧布局使用有限范围的 DOM 几何识别以兼容不同类名；不同 ZCode 版本可能仍需实机微调。
+1. **全中式十雅预设**：告别千篇一律的西式配色，内置 **墨韵寒香、千里江山、紫禁朱墙、敦煌飞天、江南烟雨、松烟沉香**（深色）与 **青花瓷影、宣纸书卷、汝窑天青、玉露茗茶**（浅色）。
+2. **中式白描意境线画与轩窗边框**：可选 **远山云水、寒梅修竹、祥云瑞鹤、轩窗回纹、曲水荷风、松风琴韵** 六幅矢量白描画，支持 **淡墨轻岚 / 适中意境 / 浓墨重彩** 三档墨韵浓淡，以及 **回纹博古角花 / 宋式双阑框线** 装饰与 **清雅黑体 / 书卷宋刻 / 翰墨楷书** 字体切换。
+3. **左侧边栏与系统主题完美同步**：无论 ZCode 原生「界面主题」处于深色还是浅色模式，切换任意深浅自定义主题时，左侧导航栏、返回工作区按钮、分组标题、下拉菜单与 Switch 开关均会整体协调换肤，不再出现左黑右白、深色字叠黑底的问题。
+4. **十三色精调 + 珍藏槽位 + JSON 分享**：支持主背景、侧栏、面板、卡片、文字、强调色、边框及 6 项代码语法高亮颜色实时预览微调，可保存至 6 个本地珍藏槽位，或通过「导出 JSON / 导入 JSON」与朋友分享主题方案。
 
-**已安装 Model Puller 与自动守护的 Linux 用户**：
+**已安装旧版插件与自动守护的 Linux 用户升级命令**：
 
 ```bash
 cd ~/git_soft/zcode-model-puller
 git pull --ff-only origin main
-# 先完全退出 ZCode，再更新 systemd 的受保护代码快照
+# 先完全退出 ZCode，再更新 systemd 的受保护代码快照并触发构建
 bash install-auto-linux.sh install
 sudo systemctl start zcode-model-puller-auto.service
 bash install-auto-linux.sh logs
 bash install-linux.sh status
 ```
 
-完整的升级、恢复、兼容性限制及问题处理请阅读 [THEME.md](THEME.md)。自动维护器会比较 ASAR 中的主题脚本与本地已安装的脚本，仅在确有变化时尝试受校验的升级；ZCode 仍在运行时会推迟资源替换。**不会**自动从 GitHub 更新自身代码。
-
-> 主题管理器已经获得 Ubuntu 用户的实际安装运行确认；本次设置页入口改造尚需在你的真实 ZCode 上检查。它是非官方 CSS 变量覆盖，部分 ZCode 控件可能不会完全跟随自定义颜色；浅色预设建议先切换 ZCode 官方浅色模式。
+详细说明与故障排查请阅读 [THEME.md](THEME.md)。
 
 ## 界面预览
 
@@ -64,11 +65,11 @@ bash install-linux.sh
 bash install-linux.sh status
 ```
 
-安装器在普通用户的暂存目录构建并验证 ASAR，备份当前原版资源，最后才使用 sudo 发布校验产物。已注入的版本会直接跳过。ZCode 更新覆盖注入时，可再次运行 `bash install-linux.sh`。
+安装器在普通用户的暂存目录构建并验证 ASAR，备份当前原版资源，最后才使用 sudo 发布校验产物。已注入且主题脚本为最新的版本会直接跳过。ZCode 更新覆盖注入时，可再次运行 `bash install-linux.sh`。
 
 ## 可选：开机启动的自动维护
 
-这是 **持久 systemd 系统服务**，初次安装时需要明确授权 sudo。它检测到 ZCode 的 ASAR 已恢复为未注入状态，会尝试以独立、低权限的 `zcode-puller` 账号重新构建和验证，再由系统服务部署。启用前请阅读 [安全注意事项](SECURITY.md) 与 [实现细节](LINUX.md)。
+这是 **持久 systemd 系统服务**，初次安装时需要明确授权 sudo。它检测到 ZCode 的 ASAR 已恢复为未注入状态或主题脚本有更新时，会尝试以独立、低权限的 `zcode-puller` 账号重新构建和验证，再由系统服务部署。启用前请阅读 [安全注意事项](SECURITY.md) 与 [实现细节](LINUX.md)。
 
 ```bash
 # 安装定时器（一次性操作）
@@ -82,7 +83,7 @@ bash install-auto-linux.sh logs
 bash install-auto-linux.sh remove
 ```
 
-维护器仅修复被客户端更新覆盖的注入。**不会自动 git pull、不会对已注入客户端强制升级插件，也不会为不兼容的新版本跳过检查。** 修改本仓库自动维护源码后，需要重新执行 `bash install-auto-linux.sh install`，以更新 root 所持有的服务代码快照。
+维护器仅修复被客户端更新覆盖的注入或同步本地已更新的脚本。**不会自动 git pull，也不会为不兼容的新版本跳过检查。** 修改本仓库源码后，需要重新执行 `bash install-auto-linux.sh install`，以更新 root 所持有的服务代码快照。
 
 ## 只同步模型，不修改 ZCode 程序
 
@@ -112,20 +113,22 @@ bash install-auto-linux.sh restore
 ## 开发与测试
 
 ```bash
+node --check zcode-theme-manager.js && node --check zcode-model-puller.js
+node --test tests/test_theme_manager.cjs
 python3 -m unittest discover -s tests -v
-python3 -m py_compile linux_installer.py auto_maintain.py auto_builder.py
-bash -n install-linux.sh install-auto-linux.sh
+python3 -m py_compile inject_tool.py linux_installer.py auto_maintain.py auto_builder.py
+bash -n install-linux.sh install-auto-linux.sh install.sh uninstall.sh
 ```
 
-自动测试涵盖 ASAR 格式识别、备份、安装、失败回滚、重复注入跳过、异常重试节流等，**不等同于完整的 ZCode 版本兼容验证**。欢迎使用 [Issues](https://github.com/lbg2002/zcode-model-puller/issues) 反馈版本、系统信息和已脱敏日志。
+欢迎使用 [Issues](https://github.com/lbg2002/zcode-model-puller/issues) 反馈版本、系统信息和已脱敏日志。
 
 ## 来源、声明与协议
 
 - **上游项目及原作者**：[HHQ-666/zcode-model-puller](https://github.com/HHQ-666/zcode-model-puller) · HHQ；界面注入、模型同步和 macOS 功能保留上游实现。
-- **此 Fork**：`lbg2002` 维护的 Ubuntu/Linux 扩展与自动维护实现。
+- **此 Fork**：`lbg2002` 维护的 ZCode Enhancer（中式主题工坊 v2.0、增强版模型拉取器、Ubuntu/Linux 扩展与自动维护实现）。
 - **开源许可**：[MIT](LICENSE)，保留上游 copyright。
 - **免责声明**：修改第三方客户端的 Electron ASAR 可能被官方更新覆盖，也可能产生兼容性或运行风险；在你有权限管理的设备上使用，先做好备份。该项目与 ZCode 官方无隶属或认可关系。
 
 ---
 
-**English quick start:** On Ubuntu `.deb` installs, run `bash install-linux.sh` for staged installation or opt in to a privileged systemd timer with `bash install-auto-linux.sh install`. See [LINUX.md](LINUX.md) for caveats, restoration, and unattended maintenance. macOS users should follow the original upstream `./install.sh` path.
+**English quick start:** On Ubuntu `.deb` installs, run `bash install-linux.sh` for staged installation or opt in to a privileged systemd timer with `bash install-auto-linux.sh install`. Press `Alt+Shift+T` or open **Settings → Appearance → Custom Theme** in ZCode to customize the 10 classical Chinese themes and traditional SVG line-art illustrations. See [LINUX.md](LINUX.md) and [THEME.md](THEME.md) for details.

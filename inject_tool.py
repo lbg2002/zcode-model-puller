@@ -29,7 +29,7 @@ UNPACKED_DIR = RESOURCES_DIR / "app.asar.unpacked"
 SCRIPT_DIR = Path(__file__).resolve().parent
 PULLER_JS_FILE = SCRIPT_DIR / "zcode-model-puller.js"
 THEME_JS_FILE = SCRIPT_DIR / "zcode-theme-manager.js"
-ENABLE_THEME = os.environ.get("ZCODE_PULLER_ENABLE_THEME") == "1"
+ENABLE_THEME = os.environ.get("ZCODE_PULLER_ENABLE_THEME", "1") != "0"
 
 WORK_DIR = Path("/tmp/zcode_inject_build")
 TEMP_ASAR = Path("/tmp/zcode_repacked.asar")
